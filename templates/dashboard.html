@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Farmer AI{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="color: var(--primary-dark); font-size: 2rem;" data-i18n="welcomeFarmer">
+            👨‍🌾 Welcome back, {{ user.name }}!
+        </h1>
+        <p style="color: var(--text-secondary); margin-top: 4px;">
+            📍 Location: <strong>{{ user.location }}</strong> | 🗣️ Language: <strong>{{ user.language|upper }}</strong>
+        </p>
+    </div>
+
+    <a href="{{ url_for('decision_score') }}" class="btn btn-primary">
+        ⭐ Calculate Decision Score
+    </a>
+</div>
+
+<!-- Weather Alert Banner -->
+<div class="alert-box alert-warning">
+    <span style="font-size: 1.8rem;">⚠️</span>
+    <div>
+        <strong style="font-size: 1.1rem;">Weather Advisory for {{ user.location }}</strong>
+        <p style="margin-top: 4px;">
+            Moderate rainfall (25-35mm) expected in the next 24 hours. Consider postponing field spraying and ensure adequate surface drainage for cotton and paddy fields.
+        </p>
+    </div>
+</div>
+
+<!-- Summary Cards Grid -->
+<div class="grid-3" style="margin-bottom: 2.5rem;">
+    <!-- Decision Score Card -->
+    <div class="card" style="background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1rem; opacity: 0.9;">Farmer Decision Score</span>
+            <span style="font-size: 1.5rem;">⭐</span>
+        </div>
+        <div style="font-size: 3.2rem; font-weight: 800; margin: 0.5rem 0;">
+            {{ latest_score.overall_score if latest_score else 87 }}<span style="font-size: 1.5rem; opacity: 0.8;">/100</span>
+        </div>
+        <p style="font-size: 0.9rem; opacity: 0.9;">
+            Optimal conditions for {{ latest_score.crop_name if latest_score else 'Cotton' }} in current season.
+        </p>
+    </div>
+
+    <!-- Smart Crop Status -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1rem; color: var(--text-secondary); font-weight: 600;">Recommended Crop</span>
+            <span style="font-size: 1.5rem;">🌱</span>
+        </div>
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary-dark); margin: 0.8rem 0;">
+            {{ latest_crop.recommended_crop if latest_crop else 'Cotton' }}
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);">
+            Confidence: <strong style="color: var(--primary-color);">{{ latest_crop.confidence if latest_crop else 85 }}%</strong>
+        </p>
+    </div>
+
+    <!-- Irrigation Status -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 1rem; color: var(--text-secondary); font-weight: 600;">Irrigation Needs</span>
+            <span style="font-size: 1.5rem;">💧</span>
+        </div>
+        <div style="font-size: 2rem; font-weight: 700; color: #0288d1; margin: 0.8rem 0;">
+            Medium
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);">
+            Irrigation may be needed in 2 days.
+        </p>
+    </div>
+</div>
+
+<!-- Quick Navigation Links -->
+<h2 style="margin-bottom: 1.5rem; color: var(--primary-dark);">⚡ Quick Actions</h2>
+<div class="grid-3">
+    <a href="{{ url_for('crop_recommendation') }}" style="text-decoration: none;">
+        <div class="card" style="border-left: 5px solid var(--primary-color);">
+            <h3>🌱 Get Crop Advice</h3>
+            <p style="color: var(--text-secondary); margin-top: 6px; font-size: 0.95rem;">Enter soil and season parameters for instant ML recommendation.</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('disease_detection') }}" style="text-decoration: none;">
+        <div class="card" style="border-left: 5px solid #e65100;">
+            <h3>📷 Scan Leaf Image</h3>
+            <p style="color: var(--text-secondary); margin-top: 6px; font-size: 0.95rem;">Upload leaf photos to detect Early Blight, Blast, and Rust.</p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('chatbot') }}" style="text-decoration: none;">
+        <div class="card" style="border-left: 5px solid #00838f;">
+            <h3>🤖 Ask AI Chatbot</h3>
+            <p style="color: var(--text-secondary); margin-top: 6px; font-size: 0.95rem;">Chat with your agricultural AI assistant in your language.</p>
+        </div>
+    </a>
+</div>
+{% endblock %}

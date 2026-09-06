@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Plant Disease Detection - Farmer AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 1rem auto;">
+    <h1 style="color: var(--primary-dark); margin-bottom: 0.5rem; text-align: center;">
+        📷 Plant Disease Detection
+    </h1>
+    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+        Upload a clear photograph of an affected plant leaf. Our AI model will diagnose symptoms and provide immediate treatment steps.
+    </p>
+
+    <div class="card" style="margin-bottom: 2rem;">
+        <form id="diseaseForm" enctype="multipart/form-data">
+            <div class="dropzone" id="leafDropzone">
+                <div class="dropzone-icon">📷</div>
+                <h3>Drag & Drop Leaf Image Here</h3>
+                <p style="color: var(--text-secondary); margin: 0.5rem 0;">or click to select photo from device</p>
+                <input type="file" id="leafInput" name="leaf_image" accept="image/*" style="display: none;" required>
+                <img id="image-preview" alt="Leaf Preview" />
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.5rem; font-size: 1.1rem;">
+                🔍 Analyze Plant Health & Diagnose ➔
+            </button>
+        </form>
+    </div>
+
+    <!-- Disease Diagnosis Output Card -->
+    <div id="diseaseResultCard" class="card" style="display: none; background: #fffde7; border: 2px solid #fbc02d;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fff59d; padding-bottom: 1rem; margin-bottom: 1.2rem;">
+            <div>
+                <span style="font-size: 0.85rem; color: #f57f17; font-weight: 700; text-transform: uppercase;">AI Diagnosis Result</span>
+                <h2 id="resDiseaseName" style="font-size: 2.2rem; color: #e65100; margin-top: 2px;">Tomato Early Blight</h2>
+                <div id="resCropCategory" style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; margin-top: 4px;">Target Crop: Tomato</div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">Confidence</span>
+                <div id="resDiseaseConfidence" style="font-size: 2.4rem; font-weight: 800; color: #2e7d32;">92%</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1.2rem;">
+            <strong style="color: #e65100;">Symptoms & Severity:</strong>
+            <p id="resSymptoms" style="margin-top: 4px; color: var(--text-primary); line-height: 1.5;">
+                Dark concentric rings on older leaves, yellowing foliage margin, premature defoliation.
+            </p>
+        </div>
+
+        <div>
+            <h4 style="color: var(--primary-dark); margin-bottom: 0.8rem;">✓ Treatment Suggestions & Action Plan:</h4>
+            <ul id="resSuggestionsList" style="list-style: none; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically populated suggestions -->
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('diseaseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('leafInput');
+    if (!fileInput.files.length) {
+        showToast('Please select a leaf image file first', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('leaf_image', fileInput.files[0]);
+
+    try {
+        showToast('Analyzing image with AI Model...', 'info');
+        const response = await fetch('/api/detect-disease', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            document.getElementById('resDiseaseName').textContent = result.disease;
+            document.getElementById('resCropCategory').textContent = 'Target Crop: ' + result.crop;
+            document.getElementById('resDiseaseConfidence').textContent = result.confidence + '%';
+            document.getElementById('resSymptoms').textContent = result.symptoms;
+
+            const listElem = document.getElementById('resSuggestionsList');
+            listElem.innerHTML = '';
+            result.suggestions.forEach(item => {
+                const li = document.createElement('li');
+                li.style.cssText = 'background: white; padding: 10px 14px; border-radius: 6px; border-left: 4px solid var(--primary-color); font-size: 0.95rem; font-weight: 500;';
+                li.innerHTML = `✓ ${item}`;
+                listElem.appendChild(li);
+            });
+
+            document.getElementById('diseaseResultCard').style.display = 'block';
+            document.getElementById('diseaseResultCard').scrollIntoView({ behavior: 'smooth' });
+            showToast('Disease analysis complete!', 'success');
+        } else {
+            showToast(result.error || 'Failed to diagnose leaf image', 'error');
+        }
+    } catch (err) {
+        showToast('Network error during leaf scan', 'error');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Farmer AI{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div>
+        <h1 class="hero-title" data-i18n="heroTitle">🌱 Smart Agriculture Assistant for Empowered Farmers</h1>
+        <p class="hero-subtitle" data-i18n="heroDesc">
+            Make informed agricultural decisions with AI-driven crop selection, leaf disease diagnosis, weather warnings, and smart irrigation guidance.
+        </p>
+        <div class="hero-buttons">
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Farmer Dashboard 🌾</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started Now 🚀</a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline">Demo Login (Ramesh) 🔑</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="hero-image">
+        🌾🚜
+    </div>
+</section>
+
+<!-- Modules Showcase Grid -->
+<h2 style="margin-bottom: 1.5rem; color: var(--primary-dark); font-size: 1.8rem; text-align: center;">
+    🚀 Core AI Modules & Features
+</h2>
+
+<div class="grid-3">
+    <div class="card">
+        <div class="card-icon">🌱</div>
+        <h3 class="card-title" data-i18n="cropRecTitle">Smart Crop Recommendation</h3>
+        <p class="card-desc" data-i18n="cropRecDesc">
+            Get data-driven recommendations tailored to your soil, location, season, and water availability.
+        </p>
+        <a href="{{ url_for('crop_recommendation') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">Analyze Crop ➔</a>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">📷</div>
+        <h3 class="card-title" data-i18n="diseaseTitle">Plant Disease Detection</h3>
+        <p class="card-desc" data-i18n="diseaseDesc">
+            Upload a photo of an affected leaf to instantly detect plant diseases and get organic/chemical treatment steps.
+        </p>
+        <a href="{{ url_for('disease_detection') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">Scan Leaf ➔</a>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">💧</div>
+        <h3 class="card-title" data-i18n="irrigationTitle">Smart Irrigation Advisor</h3>
+        <p class="card-desc" data-i18n="irrigationDesc">
+            Calculate precise water needs based on soil moisture and live weather conditions.
+        </p>
+        <a href="{{ url_for('irrigation_advisor') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">Check Water ➔</a>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">⭐</div>
+        <h3 class="card-title" data-i18n="scoreTitle">Farmer Decision Score</h3>
+        <p class="card-desc" data-i18n="scoreDesc">
+            Get an intuitive 0-100 score combining soil, weather, water, and crop suitability factors.
+        </p>
+        <a href="{{ url_for('decision_score') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">View Score ➔</a>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">🌦️</div>
+        <h3 class="card-title">Weather Farming Alerts</h3>
+        <p class="card-desc">
+            Stay protected against heavy rainfall, drought, and extreme humidity with real-time actionable advisories.
+        </p>
+        <a href="{{ url_for('weather_alerts') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">View Alerts ➔</a>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">🤖</div>
+        <h3 class="card-title" data-i18n="chatTitle">AI Farming Chatbot</h3>
+        <p class="card-desc" data-i18n="chatDesc">
+            Ask any farming or crop care question in your native language and receive instant expert answers.
+        </p>
+        <a href="{{ url_for('chatbot') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">Ask AI ➔</a>
+    </div>
+</div>
+{% endblock %}

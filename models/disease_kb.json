@@ -1,0 +1,74 @@
+{
+  "Tomato Early Blight": {
+    "crop": "Tomato",
+    "disease": "Tomato Early Blight (Alternaria solani)",
+    "severity": "Moderate to Severe",
+    "symptoms": "Dark concentric rings (target-board spots) on older leaves, yellowing foliage margin, premature defoliation.",
+    "suggestions": [
+      "Remove affected leaves immediately and destroy them (do not compost).",
+      "Avoid overhead watering; irrigate at the soil level to keep foliage dry.",
+      "Apply copper-based fungicide or Neem oil solution (2-3 ml/L) every 7-10 days.",
+      "Ensure proper plant spacing for sunlight and air circulation.",
+      "Rotate tomato crops with non-solanaceous crops (e.g., maize, beans) next season."
+    ]
+  },
+  "Potato Late Blight": {
+    "crop": "Potato / Tomato",
+    "disease": "Potato Late Blight (Phytophthora infestans)",
+    "severity": "Critical",
+    "symptoms": "Water-soaked dark lesions on leaf tips/margins, white mold on lower surface during humid weather.",
+    "suggestions": [
+      "Prune infected plant parts immediately to prevent rapid canopy spore spread.",
+      "Apply systemic fungicide containing Mancozeb or Ridomil Gold.",
+      "Maintain well-drained soil and avoid standing water.",
+      "Monitor daily during high humidity and cool damp nights.",
+      "Destroy harvested tubers showing surface brown rot."
+    ]
+  },
+  "Rice Leaf Blast": {
+    "crop": "Rice",
+    "disease": "Rice Leaf Blast (Magnaporthe oryzae)",
+    "severity": "High",
+    "symptoms": "Spindle-shaped or diamond-shaped lesions with grayish-white centers and reddish-brown borders.",
+    "suggestions": [
+      "Avoid excessive nitrogenous fertilizer application.",
+      "Maintain 2-5 cm standing water layer in paddy field to reduce spore germ tube entry.",
+      "Spray Tricyclazole 75 WP @ 0.6 g/L water at first appearance of lesions.",
+      "Select blast-resistant rice cultivars for the next sowing cycle."
+    ]
+  },
+  "Cotton Bacterial Blight": {
+    "crop": "Cotton",
+    "disease": "Cotton Angular Leaf Spot / Bacterial Blight (Xanthomonas citri)",
+    "severity": "Moderate",
+    "symptoms": "Angular dark water-soaked spots bounded by leaf veins, stem black arm lesions.",
+    "suggestions": [
+      "Spray Streptocycline (100 ppm) mixed with Copper Oxychloride (0.25%).",
+      "Use delinted and seed-treated disease-free certified cotton seeds.",
+      "Remove infected crop residue from the field post-harvest.",
+      "Avoid flood irrigation that carries bacteria between rows."
+    ]
+  },
+  "Corn Common Rust": {
+    "crop": "Maize / Corn",
+    "disease": "Corn Common Rust (Puccinia sorghi)",
+    "severity": "Low to Moderate",
+    "symptoms": "Small brownish-red pustules on both upper and lower leaf surfaces.",
+    "suggestions": [
+      "Apply foliar fungicide (Mancozeb @ 2g/L) if infection occurs before silking stage.",
+      "Plant rust-resistant hybrid corn varieties.",
+      "Ensure balanced soil potassium levels to improve natural immunity."
+    ]
+  },
+  "Healthy Leaf": {
+    "crop": "General Crop",
+    "disease": "Healthy Plant Leaf (No Disease Detected)",
+    "severity": "None",
+    "symptoms": "Vibrant green leaf color, smooth leaf texture, no fungal lesions or chlorosis.",
+    "suggestions": [
+      "Continue regular irrigation and balanced fertilization (NPK).",
+      "Monitor weekly for early pest or disease signs.",
+      "Maintain optimal field weed control and healthy soil organic carbon."
+    ]
+  }
+}

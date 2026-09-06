@@ -1,0 +1,26 @@
+soil_type,season,water_availability,previous_crop,location,temperature,humidity,ph,rainfall,recommended_crop,reason
+Black,Kharif,High,Pulse,Telangana,28,75,6.8,1100,Cotton,Suitable black soil with Kharif season and high rainfall support robust cotton boll growth.
+Alluvial,Kharif,High,Fallow,Punjab,26,80,7.0,1200,Rice,High moisture retentive alluvial soil combined with Kharif monsoon supports heavy rice cultivation.
+Alluvial,Rabi,Medium,Rice,Punjab,20,60,6.5,450,Wheat,Alluvial soil post-rice harvest in cool Rabi season is ideal for high-yield wheat.
+Red,Kharif,Medium,Cotton,Telangana,30,65,6.2,800,Maize,Red well-drained soil in Kharif season post-cotton provides optimal aeration for maize.
+Sandy,Zaid,Low,Wheat,Rajasthan,34,45,7.2,300,Groundnut,Sandy soil allows easy peg formation for groundnut in warm Zaid climate with low water.
+Black,Kharif,High,Rice,Maharashtra,31,70,7.5,1300,Sugarcane,Nutrient-rich black soil with abundant water infrastructure favors long-duration sugarcane.
+Loamy,Rabi,Medium,Corn,Karnataka,22,55,6.6,500,Tomato,Loamy fertile soil with moderate moisture and cool temperatures maximizes tomato yield.
+Red,Rabi,Low,Maize,Andhra Pradesh,25,50,6.4,400,Pulses,Low water requirement pulses thrive in red soil post-maize crop cycle.
+Clay,Kharif,High,Fallow,West Bengal,29,82,6.1,1400,Rice,Heavy clay soil retaining deep water is perfect for Kharif paddy.
+Sandy,Rabi,Low,Pulses,Gujarat,23,48,7.4,350,Mustard,Cool Rabi temperatures with sandy loam soil yield oil-rich mustard crops.
+Black,Kharif,Medium,Wheat,Telangana,29,68,6.9,850,Soybean,Black soil retains moisture after summer, ideal for Kharif soybean pod development.
+Loamy,Kharif,Medium,Fallow,Tamil Nadu,30,72,6.7,900,Cotton,Well-drained loam with moderate rain supports quality cotton fiber harvest.
+Red,Zaid,Low,Rice,Telangana,33,40,6.3,250,Groundnut,Light red sandy loam prevents waterlogging and encourages groundnut pod growth.
+Black,Rabi,Medium,Cotton,Maharashtra,24,58,7.1,500,Wheat,Black clay-loam provides moisture storage for winter Rabi wheat.
+Alluvial,Kharif,Medium,Legumes,Uttar Pradesh,27,70,6.9,950,Maize,Alluvial soil rich in nitrogen after legumes boosts Kharif maize cobs.
+Clay,Rabi,High,Rice,Andhra Pradesh,21,65,6.7,600,Tomato,Clay loam with controlled irrigation yields disease-resistant tomatoes.
+Sandy,Kharif,Low,Fallow,Rajasthan,35,42,7.5,320,Maize,Short-duration hybrid maize performs well in warm sandy regions.
+Red,Kharif,High,Pulse,Karnataka,27,78,6.0,1050,Cotton,High rainfall and well-drained red soil favor dense cotton crops.
+Loamy,Rabi,Low,Sugarcane,Uttar Pradesh,19,55,6.8,420,Pulses,Nitrogen-fixing pulses rejuvenate loamy soil after heavy sugarcane.
+Black,Zaid,Low,Wheat,Madhya Pradesh,32,45,7.0,280,Groundnut,Warm Zaid season in black soil produces healthy groundnuts.
+Alluvial,Rabi,Medium,Soybean,Punjab,18,62,7.1,480,Wheat,High soil organic matter after soybean enhances wheat grain filling.
+Red,Kharif,Medium,Fallow,Telangana,30,66,6.4,820,Maize,Red sandy loam provides excellent aeration for root and stalk development in maize.
+Clay,Kharif,High,Wheat,West Bengal,28,85,6.3,1350,Rice,High clay content retains standing water essential for high-yield rice varieties.
+Loamy,Rabi,Medium,Rice,Tamil Nadu,23,60,6.8,550,Tomato,Balanced loamy texture supports robust root structure and sweet tomato fruit set.
+Black,Kharif,High,Fallow,Gujarat,31,74,7.3,1150,Cotton,Deep black cotton soil retains rainwater naturally, reducing irrigation frequency.

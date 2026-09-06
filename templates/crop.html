@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Smart Crop Recommendation - Farmer AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 1rem auto;">
+    <h1 style="color: var(--primary-dark); margin-bottom: 0.5rem; text-align: center;">
+        🌱 Smart Crop Recommendation
+    </h1>
+    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+        Enter your field conditions to receive AI-powered crop selection guidance backed by machine learning.
+    </p>
+
+    <div class="card" style="margin-bottom: 2rem;">
+        <form id="cropForm">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem;">
+                <div class="form-group">
+                    <label for="soil_type">Soil Type</label>
+                    <select id="soil_type" name="soil_type" class="form-control" required>
+                        <option value="Black" selected>Black Soil</option>
+                        <option value="Alluvial">Alluvial Soil</option>
+                        <option value="Red">Red Soil</option>
+                        <option value="Sandy">Sandy Soil</option>
+                        <option value="Clay">Clay Soil</option>
+                        <option value="Loamy">Loamy Soil</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location / Region</label>
+                    <select id="location" name="location" class="form-control" required>
+                        <option value="Telangana" selected>Telangana</option>
+                        <option value="Andhra Pradesh">Andhra Pradesh</option>
+                        <option value="Punjab">Punjab</option>
+                        <option value="Maharashtra">Maharashtra</option>
+                        <option value="Karnataka">Karnataka</option>
+                        <option value="Tamil Nadu">Tamil Nadu</option>
+                        <option value="Gujarat">Gujarat</option>
+                        <option value="Uttar Pradesh">Uttar Pradesh</option>
+                        <option value="West Bengal">West Bengal</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="season">Season</label>
+                    <select id="season" name="season" class="form-control" required>
+                        <option value="Kharif" selected>Kharif (Monsoon)</option>
+                        <option value="Rabi">Rabi (Winter)</option>
+                        <option value="Zaid">Zaid (Summer)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="water_availability">Available Water</label>
+                    <select id="water_availability" name="water_availability" class="form-control" required>
+                        <option value="High">High (Abundant Irrigation)</option>
+                        <option value="Medium" selected>Medium (Normal Monsoon/Borewell)</option>
+                        <option value="Low">Low (Rainfed / Dryland)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="previous_crop">Previous Crop</label>
+                    <select id="previous_crop" name="previous_crop" class="form-control" required>
+                        <option value="Pulse" selected>Pulses / Legumes</option>
+                        <option value="Rice">Rice / Paddy</option>
+                        <option value="Wheat">Wheat</option>
+                        <option value="Cotton">Cotton</option>
+                        <option value="Corn">Corn / Maize</option>
+                        <option value="Sugarcane">Sugarcane</option>
+                        <option value="Fallow">Fallow Land</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.5rem; font-size: 1.1rem;">
+                🧠 Generate Crop Recommendation ➔
+            </button>
+        </form>
+    </div>
+
+    <!-- Result Card -->
+    <div id="resultCard" class="card" style="display: none; background: #f1f8e9; border: 2px solid var(--primary-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c8e6c9; padding-bottom: 1rem; margin-bottom: 1rem;">
+            <div>
+                <span style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">AI Recommended Crop</span>
+                <h2 id="resCropName" style="font-size: 2.5rem; color: var(--primary-dark); margin-top: 2px;">Cotton</h2>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">Confidence Score</span>
+                <div id="resConfidence" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color);">85%</div>
+            </div>
+        </div>
+
+        <div>
+            <h4 style="color: var(--primary-dark); margin-bottom: 0.5rem;">💡 Recommendation Reason:</h4>
+            <p id="resReason" style="font-size: 1.05rem; line-height: 1.6; color: var(--text-primary); background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                Suitable soil + current season + available water conditions provide optimal yield growth environment.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('cropForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('/api/recommend-crop', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            document.getElementById('resCropName').textContent = result.recommended_crop;
+            document.getElementById('resConfidence').textContent = result.confidence + '%';
+            document.getElementById('resReason').textContent = result.reason;
+            document.getElementById('resultCard').style.display = 'block';
+            document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showToast(result.error || 'Failed to get recommendation', 'error');
+        }
+    } catch (err) {
+        showToast('Network error occurred while contacting AI model', 'error');
+    }
+});
+</script>
+{% endblock %}

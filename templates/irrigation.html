@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Smart Irrigation Advisor - Farmer AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 1rem auto;">
+    <h1 style="color: var(--primary-dark); margin-bottom: 0.5rem; text-align: center;">
+        💧 Smart Irrigation Advisor
+    </h1>
+    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+        Prevent over-watering or crop drought by calculating precise irrigation schedules based on soil moisture and weather conditions.
+    </p>
+
+    <div class="card" style="margin-bottom: 2rem;">
+        <form id="irrigationForm">
+            <div class="form-group">
+                <label for="crop_type">Crop Type</label>
+                <select id="crop_type" name="crop_type" class="form-control" required>
+                    <option value="Rice" selected>Rice / Paddy (High Water Requirement)</option>
+                    <option value="Cotton">Cotton (Medium Requirement)</option>
+                    <option value="Wheat">Wheat (Medium Requirement)</option>
+                    <option value="Maize">Maize / Corn (Medium Requirement)</option>
+                    <option value="Groundnut">Groundnut (Low to Medium Requirement)</option>
+                    <option value="Sugarcane">Sugarcane (Very High Requirement)</option>
+                    <option value="Tomato">Tomato (Moderate Controlled Water)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="moisture_pct">Current Soil Moisture (%): <span id="moistureVal" style="color: var(--primary-color); font-weight: 700;">35%</span></label>
+                <input type="range" id="moisture_pct" name="moisture_pct" min="0" max="100" value="35" class="form-control" style="cursor: pointer;">
+            </div>
+
+            <div class="form-group">
+                <label for="weather_condition">Current / Forecast Weather</label>
+                <select id="weather_condition" name="weather_condition" class="form-control" required>
+                    <option value="Sunny & Dry" selected>☀️ Sunny & Dry</option>
+                    <option value="Partly Cloudy">⛅ Partly Cloudy</option>
+                    <option value="Heavy Rain Expected">🌧️ Heavy Rain Expected</option>
+                    <option value="High Humidity">💧 High Humidity / Dew</option>
+                    <option value="Hot & Windy">🔥 Hot & Dry Winds</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.5rem; font-size: 1.1rem;">
+                💧 Calculate Irrigation Need ➔
+            </button>
+        </form>
+    </div>
+
+    <!-- Output Card -->
+    <div id="irrigationResultCard" class="card" style="display: none; background: #e1f5fe; border: 2px solid #0288d1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b3e5fc; padding-bottom: 1rem; margin-bottom: 1rem;">
+            <div>
+                <span style="font-size: 0.85rem; color: #0277bd; font-weight: 700; text-transform: uppercase;">Crop Analyzed</span>
+                <h2 id="resIrrigationCrop" style="font-size: 2.2rem; color: #01579b; margin-top: 2px;">Rice</h2>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">Water Requirement</span>
+                <div id="resWaterReq" style="font-size: 2.2rem; font-weight: 800; color: #0288d1;">Medium</div>
+            </div>
+        </div>
+
+        <div>
+            <h4 style="color: #01579b; margin-bottom: 0.5rem;">💡 Irrigation Advisory:</h4>
+            <p id="resIrrigationSuggestion" style="font-size: 1.05rem; line-height: 1.6; color: var(--text-primary); background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #0288d1;">
+                Irrigation may be needed soon.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const moistureRange = document.getElementById('moisture_pct');
+const moistureVal = document.getElementById('moistureVal');
+moistureRange.addEventListener('input', (e) => {
+    moistureVal.textContent = e.target.value + '%';
+});
+
+document.getElementById('irrigationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('/api/irrigation-advice', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            document.getElementById('resIrrigationCrop').textContent = result.crop;
+            document.getElementById('resWaterReq').textContent = result.water_requirement;
+            document.getElementById('resIrrigationSuggestion').textContent = result.suggestion;
+            document.getElementById('irrigationResultCard').style.display = 'block';
+            document.getElementById('irrigationResultCard').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showToast(result.error || 'Failed to calculate irrigation advice', 'error');
+        }
+    } catch (err) {
+        showToast('Network error while requesting irrigation plan', 'error');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Weather Farming Alerts - Farmer AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 1rem auto;">
+    <h1 style="color: var(--primary-dark); margin-bottom: 0.5rem; text-align: center;">
+        🌦️ Weather-Based Farming Alerts
+    </h1>
+    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+        Real-time meteorology advisories helping you protect crops, optimize field operations, and prevent crop loss.
+    </p>
+
+    <!-- Weather Forecast Summary Card -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #0288d1 0%, #01579b 100%); color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <span style="opacity: 0.9; font-size: 0.95rem;">Current Location</span>
+                <h2 style="font-size: 2rem; margin-top: 2px;">📍 Telangana Region</h2>
+                <p style="margin-top: 4px; opacity: 0.9;">Season: Kharif Monsoon | Humidity: 78% | Temp: 28°C</p>
+            </div>
+            <div style="font-size: 4rem;">
+                ⛈️
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Container -->
+    <h3 style="color: var(--primary-dark); margin-bottom: 1rem;">🚨 Active Farming Alerts</h3>
+
+    <div class="alert-box alert-warning">
+        <span style="font-size: 2rem;">⚠</span>
+        <div>
+            <h3 style="font-size: 1.2rem; margin-bottom: 4px;">Heavy Rain Expected</h3>
+            <p style="font-size: 0.95rem; line-height: 1.5;">
+                <strong>Suggestion:</strong> Avoid irrigation today. Protect harvested crops if possible and clear field runoff channels to prevent standing water accumulation.
+            </p>
+        </div>
+    </div>
+
+    <div class="alert-box alert-info">
+        <span style="font-size: 2rem;">🌡️</span>
+        <div>
+            <h3 style="font-size: 1.2rem; margin-bottom: 4px;">Optimal Humidity for Pest Monitoring</h3>
+            <p style="font-size: 0.95rem; line-height: 1.5;">
+                <strong>Suggestion:</strong> High humidity may encourage bollworm activity in cotton and stem borer in paddy. Inspect lower leaf stalks twice this week.
+            </p>
+        </div>
+    </div>
+
+    <div class="alert-box alert-info" style="background: #e8f5e9; border-left: 5px solid #2e7d32; color: #1b5e20;">
+        <span style="font-size: 2rem;">🌬️</span>
+        <div>
+            <h3 style="font-size: 1.2rem; margin-bottom: 4px;">Wind Speed Advisory</h3>
+            <p style="font-size: 0.95rem; line-height: 1.5;">
+                <strong>Suggestion:</strong> Moderate breezes (12-16 km/h) are expected. Safe for foliar spraying between 7:00 AM and 10:00 AM.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
