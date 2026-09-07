@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, 
   Upload, 
@@ -14,16 +14,26 @@ import {
   Loader2
 } from 'lucide-react';
 import { detectDiseaseFromAPI } from '../services/geminiService';
+import { getPlants } from '../services/apiService';
 
-export default function DiseaseScanner() {
+export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
   // Step state: 1 = Scan Your Plant, 2 = Preview, 3 = Loading, 4 = Result
   const [step, setStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [plants, setPlants] = useState([]);
+  const [selectedPlantId, setSelectedPlantId] = useState(plantId || '');
 
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    setSelectedPlantId(plantId || '');
+    getPlants().then((res) => {
+      if (res?.success) setPlants(res.plants || []);
+    }).catch(() => {});
+  }, [plantId]);
 
   // STEP 1 Handlers
   const handleFilePicked = (e) => {
@@ -50,7 +60,7 @@ export default function DiseaseScanner() {
     setStep(3); // Show loading state
 
     try {
-      const result = await detectDiseaseFromAPI(selectedFile);
+      const result = await detectDiseaseFromAPI(selectedFile, selectedPlantId);
       setAnalysisResult(result);
       setStep(4);
     } catch (err) {
@@ -180,6 +190,34 @@ export default function DiseaseScanner() {
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
               Take or upload a photo of your infected leaf to find out what problem it has and how to treat it.
             </p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2">
+            <label htmlFor="plant-select" className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Scan registered plant
+            </label>
+            <select
+              id="plant-select"
+              value={selectedPlantId}
+              onChange={(event) => setSelectedPlantId(event.target.value)}
+              className="w-full min-h-[48px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 text-sm font-semibold text-slate-800 dark:text-slate-100"
+            >
+              <option value="">Choose a plant to track its history</option>
+              {plants.map((plant) => (
+                <option key={plant.id} value={plant.id}>
+                  {plant.crop_name} - {plant.field_name}
+                </option>
+              ))}
+            </select>
+            {selectedPlantId && onOpenPlantDetails && (
+              <button
+                type="button"
+                onClick={() => onOpenPlantDetails(Number(selectedPlantId))}
+                className="text-xs font-bold text-emerald-700 dark:text-emerald-400 underline underline-offset-2"
+              >
+                View this plant's health history
+              </button>
+            )}
           </div>
 
           {/* Mobile-First Action Card */}

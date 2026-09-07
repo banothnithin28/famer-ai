@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS disease_scans (
     image_name TEXT NOT NULL,
     disease_name TEXT NOT NULL,
     confidence INTEGER NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'Unknown',
+    symptoms TEXT,
     suggestions_json TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,

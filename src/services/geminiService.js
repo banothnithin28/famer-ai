@@ -75,13 +75,14 @@ export async function askFarmerAI(prompt, userApiKey = "") {
 }
 
 // Real Plant Disease Detection Service (Connects strictly to ML Model API)
-export async function detectDiseaseFromAPI(imageFile) {
+export async function detectDiseaseFromAPI(imageFile, plantId = '') {
   if (!(imageFile instanceof File || imageFile instanceof Blob)) {
     throw new Error("Please select or upload an actual leaf image file. Demo presets have been removed.");
   }
 
   const formData = new FormData();
   formData.append('leaf_image', imageFile);
+  if (plantId) formData.append('plant_id', plantId);
 
   // Call Flask API (via Vite proxy /api or direct fallback)
   let response;

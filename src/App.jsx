@@ -8,6 +8,7 @@ import WeatherAdvisor from './components/WeatherAdvisor';
 import MarketPrices from './components/MarketPrices';
 import SchemesFinder from './components/SchemesFinder';
 import FertilizerCalc from './components/FertilizerCalc';
+import PlantDetails from './components/PlantDetails';
 import ApiKeyModal from './components/ApiKeyModal';
 import AuthModal from './components/AuthModal';
 import { getCurrentUser, logoutFarmer } from './services/apiService';
@@ -20,6 +21,7 @@ export default function App() {
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [selectedPlantId, setSelectedPlantId] = useState(null);
 
   useEffect(() => {
     // Load stored Gemini key
@@ -80,11 +82,16 @@ export default function App() {
             setActiveTab={setActiveTab} 
             user={user} 
             onOpenAuthModal={() => setAuthModalOpen(true)} 
+            onOpenPlantDetails={(plantId) => {
+              setSelectedPlantId(plantId);
+              setActiveTab('plant-details');
+            }}
           />
         )}
         {activeTab === 'crop' && <CropAdvisor setActiveTab={setActiveTab} />}
         {activeTab === 'chat' && <AIChatbot apiKey={apiKey} />}
-        {activeTab === 'scanner' && <DiseaseScanner />}
+        {activeTab === 'scanner' && <DiseaseScanner plantId={selectedPlantId} onOpenPlantDetails={(plantId) => { setSelectedPlantId(plantId); setActiveTab('plant-details'); }} />}
+        {activeTab === 'plant-details' && <PlantDetails plantId={selectedPlantId} onBack={() => setActiveTab('dashboard')} />}
         {activeTab === 'weather' && <WeatherAdvisor />}
         {activeTab === 'market' && <MarketPrices />}
         {activeTab === 'schemes' && <SchemesFinder />}

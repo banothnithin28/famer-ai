@@ -42,32 +42,11 @@ def init_db():
         cursor.execute("ALTER TABLE disease_scans ADD COLUMN plant_id INTEGER REFERENCES plants(id) ON DELETE SET NULL")
         print("[OK] Migrated disease_scans table with plant_id column")
 
-    # Seed initial real plants for demo user if none exist
-    cursor.execute("SELECT COUNT(*) FROM plants WHERE user_id = ?", (user_id,))
-    if cursor.fetchone()[0] == 0:
-        cursor.execute(
-            "INSERT INTO plants (user_id, crop_name, field_name, location, notes, created_at) VALUES (?, ?, ?, ?, ?, datetime('now', '-5 days'))",
-            (user_id, "Tomato", "Tomato Field #01", "Telangana - Block A", "Drip irrigated, healthy canopy.")
-        )
-        plant_1_id = cursor.lastrowid
-
-        cursor.execute(
-            "INSERT INTO plants (user_id, crop_name, field_name, location, notes, created_at) VALUES (?, ?, ?, ?, ?, datetime('now', '-10 days'))",
-            (user_id, "Paddy / Rice", "Paddy Field #02", "Telangana - East Basin", "Tillering stage, regular irrigation.")
-        )
-        plant_2_id = cursor.lastrowid
-
-        # Add corresponding real scan records for these plants
-        cursor.execute(
-            "INSERT INTO disease_scans (user_id, plant_id, image_name, disease_name, confidence, suggestions_json, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now', '-2 hours'))",
-            (user_id, plant_1_id, "tomato_leaf_01.jpg", "Healthy Leaf", 94, '["Maintain routine organic care", "Continue optimal soil moisture"]', )
-        )
-
-        cursor.execute(
-            "INSERT INTO disease_scans (user_id, plant_id, image_name, disease_name, confidence, suggestions_json, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now', '-2 days'))",
-            (user_id, plant_2_id, "rice_leaf_blast.jpg", "Rice Leaf Blast", 71, '["Apply Tricyclazole 75% WP @ 0.6g/L", "Avoid excess nitrogen fertilizer"]', )
-        )
-        print("[OK] Seeded initial real database plants (Tomato Field #01 & Paddy Field #02)")
+    disease_scan_columns = [col[1] for col in cursor.execute("PRAGMA table_info(disease_scans)").fetchall()]
+    if 'severity' not in disease_scan_columns:
+        cursor.execute("ALTER TABLE disease_scans ADD COLUMN severity TEXT NOT NULL DEFAULT 'Unknown'")
+    if 'symptoms' not in disease_scan_columns:
+        cursor.execute("ALTER TABLE disease_scans ADD COLUMN symptoms TEXT")
 
     conn.commit()
     conn.close()

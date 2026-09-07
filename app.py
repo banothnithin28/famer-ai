@@ -121,6 +121,10 @@ def send_assets(path):
         return send_from_directory(dist_assets, path)
     return ('Asset not found', 404)
 
+@app.route('/uploads/<path:filename>')
+def send_upload(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -593,6 +597,63 @@ def api_delete_plant(plant_id):
     return jsonify({'success': True, 'message': f'Plant record #{plant_id} deleted successfully.'})
 
 
+@app.route('/api/plants/<int:plant_id>', methods=['GET'])
+def api_get_plant_details(plant_id):
+    conn = get_db()
+    plant = conn.execute("SELECT * FROM plants WHERE id = ?", (plant_id,)).fetchone()
+    if not plant:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Plant not found.'}), 404
+
+    scans = conn.execute(
+        "SELECT * FROM disease_scans WHERE plant_id = ? ORDER BY datetime(created_at) ASC, id ASC",
+        (plant_id,)
+    ).fetchall()
+    conn.close()
+
+    def health_score(scan):
+        disease = (scan['disease_name'] or '').lower()
+        severity = (scan['severity'] or '').lower()
+        if 'healthy' in disease:
+            return 100
+        if 'critical' in severity:
+            return 30
+        if 'severe' in severity or 'high' in severity:
+            return 45
+        if 'moderate' in severity:
+            return 65
+        if 'uncertain' in disease or 'unknown' in severity:
+            return min(int(scan['confidence'] or 0), 59)
+        return 75
+
+    history = []
+    for scan in scans:
+        item = dict(scan)
+        item['health_score'] = health_score(scan)
+        item['image_url'] = url_for('send_upload', filename=scan['image_name'])
+        item['symptoms'] = scan['symptoms'] or ''
+        history.append(item)
+
+    current = history[-1] if history else None
+    previous = history[-2] if len(history) > 1 else None
+    declining = bool(current and previous and current['health_score'] < previous['health_score'])
+    new_disease = bool(
+        current and 'healthy' not in current['disease_name'].lower() and
+        (not previous or 'healthy' in previous['disease_name'].lower() or
+         previous['disease_name'] != current['disease_name'])
+    )
+
+    return jsonify({
+        'success': True,
+        'plant': dict(plant),
+        'history': history,
+        'current_health': current,
+        'previous_health': previous,
+        'change_over_time': current['health_score'] - previous['health_score'] if current and previous else 0,
+        'alerts': {'declining': declining, 'new_disease': new_disease}
+    })
+
+
 # 1. Smart Crop Recommendation API
 @app.route('/api/recommend-crop', methods=['POST'])
 def api_recommend_crop():
@@ -690,6 +751,14 @@ def api_detect_disease():
     except Exception as e:
         return jsonify({'success': False, 'error': f"Image decoding failed: {str(e)}"}), 400
 
+    user_id = session.get('user_id')
+    plant_id = request.form.get('plant_id')
+    try:
+        plant_id = int(plant_id) if plant_id else None
+    except Exception:
+        plant_id = None
+    uid = user_id or 1
+
     # Inference using disease_model.pkl
     try:
         if not disease_model_data:
@@ -710,6 +779,13 @@ def api_detect_disease():
 
         # Check if the model is confident and image has clear plant features
         if confidence < 60 or foliage_signal < 0.08:
+            conn = get_db()
+            conn.execute(
+                "INSERT INTO disease_scans (user_id, plant_id, image_name, disease_name, confidence, severity, symptoms, suggestions_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (uid, plant_id, filename, 'Uncertain', confidence, 'Unknown', '', json.dumps([]))
+            )
+            conn.commit()
+            conn.close()
             return jsonify({
                 'success': True,
                 'reliable': False,
@@ -723,22 +799,15 @@ def api_detect_disease():
         disease_key = le.inverse_transform([pred_idx])[0]
         diag_info = kb.get(disease_key, list(kb.values())[0])
 
-        user_id = session.get('user_id')
-        plant_id = request.form.get('plant_id') or (request.get_json(silent=True) or {}).get('plant_id')
-        try:
-            plant_id = int(plant_id) if plant_id else None
-        except Exception:
-            plant_id = None
-
-        if user_id or plant_id:
-            uid = user_id or 1
-            conn = get_db()
-            conn.execute(
-                "INSERT INTO disease_scans (user_id, plant_id, image_name, disease_name, confidence, suggestions_json) VALUES (?, ?, ?, ?, ?, ?)",
-                (uid, plant_id, filename, diag_info.get('disease', disease_key), confidence, json.dumps(diag_info.get('suggestions', [])))
-            )
-            conn.commit()
-            conn.close()
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO disease_scans (user_id, plant_id, image_name, disease_name, confidence, severity, symptoms, suggestions_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (uid, plant_id, filename, diag_info.get('disease', disease_key), confidence,
+             diag_info.get('severity', diag_info.get('risk', 'Unknown')),
+             diag_info.get('symptoms', ''), json.dumps(diag_info.get('suggestions', [])))
+        )
+        conn.commit()
+        conn.close()
 
         return jsonify({
             'success': True,

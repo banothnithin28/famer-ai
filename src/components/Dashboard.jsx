@@ -17,16 +17,35 @@ import {
   Award,
   User
 } from 'lucide-react';
-import { getDashboardSummary } from '../services/apiService';
+import { createPlant, getDashboardSummary, getPlants } from '../services/apiService';
 
-export default function Dashboard({ setActiveTab, user, onOpenAuthModal }) {
+export default function Dashboard({ setActiveTab, user, onOpenAuthModal, onOpenPlantDetails }) {
   const [summaryData, setSummaryData] = useState(null);
+  const [plants, setPlants] = useState([]);
+  const [plantForm, setPlantForm] = useState({ crop_name: '', field_name: '', location: '' });
+  const [plantFormError, setPlantFormError] = useState('');
 
   useEffect(() => {
     getDashboardSummary().then((res) => {
       if (res && res.success) setSummaryData(res);
     }).catch(() => {});
+    getPlants().then((res) => {
+      if (res?.success) setPlants(res.plants || []);
+    }).catch(() => {});
   }, [user]);
+
+  const handleCreatePlant = async (event) => {
+    event.preventDefault();
+    setPlantFormError('');
+    try {
+      const result = await createPlant(plantForm);
+      if (!result.success) throw new Error(result.error || 'Unable to register plant.');
+      setPlants((current) => [result.plant, ...current]);
+      setPlantForm({ crop_name: '', field_name: '', location: '' });
+    } catch (error) {
+      setPlantFormError(error.message);
+    }
+  };
 
   const quickStats = [
     { 
@@ -218,6 +237,51 @@ export default function Dashboard({ setActiveTab, user, onOpenAuthModal }) {
           );
         })}
       </div>
+
+      <section className="space-y-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My plants</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Open a plant to review its real scan history.</p>
+          </div>
+          <button onClick={() => setActiveTab('scanner')} className="text-sm font-black text-emerald-700 dark:text-emerald-400">Scan a plant</button>
+        </div>
+        {plants.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 p-5 dark:border-slate-700">
+            <p className="text-sm font-semibold text-slate-500">No plants registered yet. Register a plant before scanning to build its health history.</p>
+            <form onSubmit={handleCreatePlant} className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input required value={plantForm.crop_name} onChange={(event) => setPlantForm({ ...plantForm, crop_name: event.target.value })} placeholder="Crop name" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
+              <input required value={plantForm.field_name} onChange={(event) => setPlantForm({ ...plantForm, field_name: event.target.value })} placeholder="Field or plant name" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
+              <input value={plantForm.location} onChange={(event) => setPlantForm({ ...plantForm, location: event.target.value })} placeholder="Location (optional)" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
+              <button type="submit" className="sm:col-span-3 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500">Register plant</button>
+            </form>
+            {plantFormError && <p className="mt-2 text-xs font-bold text-rose-600">{plantFormError}</p>}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {plants.map((plant) => (
+              <button
+                key={plant.id}
+                onClick={() => onOpenPlantDetails(plant.id)}
+                className="text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-lg transition-all dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-emerald-600">{plant.plant_code}</p>
+                    <h3 className="mt-1 text-lg font-black text-slate-900 dark:text-white">{plant.crop_name}</h3>
+                    <p className="text-sm text-slate-500">{plant.field_name}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${plant.status === 'Healthy' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{plant.status}</span>
+                </div>
+                <div className="mt-4 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>{plant.latest_scan_date ? `Last scan: ${plant.latest_scan_date}` : 'No scans yet'}</span>
+                  <span className="text-emerald-700 dark:text-emerald-400">View details</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Feature Modules Grid */}
       <div>

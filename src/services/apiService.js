@@ -107,6 +107,10 @@ export async function getPlants() {
   return request('/api/plants', { method: 'GET' });
 }
 
+export async function getPlantDetails(plantId) {
+  return request(`/api/plants/${plantId}`, { method: 'GET' });
+}
+
 export async function createPlant(plantData) {
   return request('/api/plants', {
     method: 'POST',
