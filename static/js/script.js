@@ -32,7 +32,7 @@ function applyLanguage(lang) {
             if (elem.tagName === 'INPUT' && elem.getAttribute('placeholder')) {
                 elem.placeholder = dict[key];
             } else {
-                elem.textContent = dict[key];
+                elem.innerHTML = dict[key];
             }
         }
     });

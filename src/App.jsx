@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
+import CropAdvisor from './components/CropAdvisor';
 import AIChatbot from './components/AIChatbot';
 import DiseaseScanner from './components/DiseaseScanner';
 import WeatherAdvisor from './components/WeatherAdvisor';
@@ -8,16 +9,20 @@ import MarketPrices from './components/MarketPrices';
 import SchemesFinder from './components/SchemesFinder';
 import FertilizerCalc from './components/FertilizerCalc';
 import ApiKeyModal from './components/ApiKeyModal';
-import { Sprout, Heart, Github, Globe } from 'lucide-react';
+import AuthModal from './components/AuthModal';
+import { getCurrentUser, logoutFarmer } from './services/apiService';
+import { Sprout, Heart } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [darkMode, setDarkMode] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Load stored key
+    // Load stored Gemini key
     const saved = localStorage.getItem('farmer_ai_gemini_key');
     if (saved) setApiKey(saved);
 
@@ -27,6 +32,13 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    // Check active session with Flask backend
+    getCurrentUser().then((res) => {
+      if (res && res.authenticated) {
+        setUser(res.user);
+      }
+    }).catch(() => {});
   }, [darkMode]);
 
   const handleSaveApiKey = (key) => {
@@ -36,6 +48,13 @@ export default function App() {
     } else {
       localStorage.removeItem('farmer_ai_gemini_key');
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutFarmer();
+    } catch {}
+    setUser(null);
   };
 
   return (
@@ -49,11 +68,21 @@ export default function App() {
         setDarkMode={setDarkMode}
         onOpenApiKeyModal={() => setApiKeyModalOpen(true)}
         apiKey={apiKey}
+        user={user}
+        onOpenAuthModal={() => setAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
+        {activeTab === 'dashboard' && (
+          <Dashboard 
+            setActiveTab={setActiveTab} 
+            user={user} 
+            onOpenAuthModal={() => setAuthModalOpen(true)} 
+          />
+        )}
+        {activeTab === 'crop' && <CropAdvisor setActiveTab={setActiveTab} />}
         {activeTab === 'chat' && <AIChatbot apiKey={apiKey} />}
         {activeTab === 'scanner' && <DiseaseScanner />}
         {activeTab === 'weather' && <WeatherAdvisor />}
@@ -89,6 +118,13 @@ export default function App() {
         onClose={() => setApiKeyModalOpen(false)}
         apiKey={apiKey}
         onSaveKey={handleSaveApiKey}
+      />
+
+      {/* Farmer Auth Modal (Login / Register / Forgot Password) */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthSuccess={(authenticatedUser) => setUser(authenticatedUser)}
       />
 
     </div>

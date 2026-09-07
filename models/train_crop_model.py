@@ -44,7 +44,7 @@ def train_and_save_crop_model():
     with open(model_output_path, 'wb') as f:
         pickle.dump(payload, f)
     
-    print(f"✅ Crop recommendation model successfully trained and saved to {model_output_path}")
+    print(f"[OK] Crop recommendation model successfully trained and saved to {model_output_path}")
 
 if __name__ == '__main__':
     train_and_save_crop_model()

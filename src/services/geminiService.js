@@ -61,8 +61,7 @@ export async function askFarmerAI(prompt, userApiKey = "") {
     }
   }
 
-  // Smart local response fallback engine
-  await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate AI processing delay
+  // Knowledge-base response fallback when Gemini API key is not configured
   const lowerPrompt = prompt.toLowerCase();
   
   for (const item of FARMING_KNOWLEDGE_BASE) {
@@ -75,95 +74,38 @@ export async function askFarmerAI(prompt, userApiKey = "") {
   return `🌾 **Farmer AI General Guidance**:\n\nThank you for asking! For **"${prompt}"**:\n\n1. **Best Practice:** Maintain proper crop spacing, soil organic matter, and balanced crop rotation.\n2. **Soil Health:** Regularly add compost or green manure (Dhaincha/Sunn hemp) to enhance soil structure.\n3. **Monitoring:** Inspect crop leaves weekly for early signs of pest entry or nutrient deficiencies.\n4. **Expert Help:** Consult your local Krishi Vigyan Kendra (KVK) or agriculture officer for localized soil testing reports.`;
 }
 
-// Disease Diagnostic Engine
-export const SAMPLE_DISEASE_DATA = {
-  tomato_blight: {
-    name: "Tomato Late Blight",
-    pathogen: "Phytophthora infestans (Oomycete)",
-    confidence: 96,
-    severity: "High",
-    symptoms: [
-      "Dark, water-soaked spots on leaves expanding rapidly",
-      "White fungal growth on lower surface of leaves during wet weather",
-      "Brown leathery patches on tomato fruit"
-    ],
-    causes: "Cool temperatures (60-70°F) combined with high humidity (>90%) and leaf wetness.",
-    organicRemedy: "Spray Copper Octanoate (Copper soap) or Neem Oil every 5-7 days. Prune bottom leaves 12 inches above soil.",
-    chemicalRemedy: "Apply Mancozeb 75% WP @ 2g/liter or Metalaxyl 8% + Mancozeb 64% WP @ 2.5g/liter.",
-    prevention: [
-      "Use certified disease-free seeds",
-      "Ensure proper plant spacing for air circulation",
-      "Practice 3-year crop rotation without Solanaceous crops"
-    ]
-  },
-  rice_blast: {
-    name: "Rice Blast Disease",
-    pathogen: "Magnaporthe oryzae (Fungus)",
-    confidence: 94,
-    severity: "Critical",
-    symptoms: [
-      "Spindle-shaped lesions with reddish-brown borders and gray centers",
-      "Neck rot causing complete head loss",
-      "Node infection leading to stem breakage"
-    ],
-    causes: "High nitrogen fertilizer application, cloudy skies, high relative humidity.",
-    organicRemedy: "Spray *Pseudomonas fluorescens* @ 10g/liter or bio-fungicide formulation.",
-    chemicalRemedy: "Spray Tricyclazole 75% WP @ 0.6g/liter or Isoprothiolane 40% EC @ 1.5ml/liter.",
-    prevention: [
-      "Avoid excess nitrogenous fertilizers",
-      "Keep field flooded during tillering stage",
-      "Treat seeds with Carbendazim before sowing"
-    ]
-  },
-  corn_rust: {
-    name: "Corn Common Rust",
-    pathogen: "Puccinia sorghi (Fungus)",
-    confidence: 91,
-    severity: "Moderate",
-    symptoms: [
-      "Small cinnamon-brown pustules on both upper and lower leaf surfaces",
-      "Pustules rupture releasing powdery rust spores",
-      "Premature leaf senescence"
-    ],
-    causes: "Airborne spores carried by wind in high humidity and moderate temperatures.",
-    organicRemedy: "Dust sulfur powder or spray sulfur-based organic fungicide.",
-    chemicalRemedy: "Apply Azoxystrobin + Difenoconazole @ 1ml/liter if rust covers >10% leaf area before silking.",
-    prevention: [
-      "Plant rust-resistant hybrid corn varieties",
-      "Destroy infected crop residues after harvest",
-      "Maintain optimal plant density"
-    ]
-  },
-  healthy_leaf: {
-    name: "Healthy Leaf (No Disease Detected)",
-    pathogen: "None (Optimal Health)",
-    confidence: 99,
-    severity: "Healthy",
-    symptoms: [
-      "Vibrant green color with uniform pigmentation",
-      "No visible spots, chlorosis, or necrotic tissue",
-      "Strong cell wall structure and turgidity"
-    ],
-    causes: "Balanced nutrition, adequate irrigation, and good field hygiene.",
-    organicRemedy: "Continue current organic regimen with regular compost application.",
-    chemicalRemedy: "No chemical intervention needed. Protect natural beneficial insects.",
-    prevention: [
-      "Maintain weekly crop monitoring",
-      "Ensure balanced N-P-K and micronutrient supply",
-      "Keep field edges free of weed hosts"
-    ]
-  }
-};
-
-export async function analyzeCropImage(imageFileOrKey) {
-  await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate AI deep model inference
-
-  if (typeof imageFileOrKey === "string" && SAMPLE_DISEASE_DATA[imageFileOrKey]) {
-    return SAMPLE_DISEASE_DATA[imageFileOrKey];
+// Real Plant Disease Detection Service (Connects strictly to ML Model API)
+export async function detectDiseaseFromAPI(imageFile) {
+  if (!(imageFile instanceof File || imageFile instanceof Blob)) {
+    throw new Error("Please select or upload an actual leaf image file. Demo presets have been removed.");
   }
 
-  // Random selection or default for user custom uploaded images
-  const keys = Object.keys(SAMPLE_DISEASE_DATA);
-  const selectedKey = keys[Math.floor(Math.random() * (keys.length - 1))]; // tomato, rice, or corn
-  return SAMPLE_DISEASE_DATA[selectedKey];
+  const formData = new FormData();
+  formData.append('leaf_image', imageFile);
+
+  // Call Flask API (via Vite proxy /api or direct fallback)
+  let response;
+  try {
+    response = await fetch('/api/detect-disease', {
+      method: 'POST',
+      body: formData
+    });
+  } catch (err) {
+    // Direct fallback if proxy is inactive
+    response = await fetch('http://127.0.0.1:5000/api/detect-disease', {
+      method: 'POST',
+      body: formData
+    });
+  }
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || `Server returned error status ${response.status}`);
+  }
+
+  return await response.json();
 }
+
+// Backward compatibility alias
+export const analyzeCropImage = detectDiseaseFromAPI;
+

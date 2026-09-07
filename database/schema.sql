@@ -33,15 +33,28 @@ CREATE TABLE IF NOT EXISTS crop_recommendations (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS plants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    crop_name TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    location TEXT NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS disease_scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    plant_id INTEGER,
     image_name TEXT NOT NULL,
     disease_name TEXT NOT NULL,
     confidence INTEGER NOT NULL,
     suggestions_json TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS irrigation_logs (

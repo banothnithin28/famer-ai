@@ -55,7 +55,7 @@
             {{ latest_crop.recommended_crop if latest_crop else 'Cotton' }}
         </div>
         <p style="font-size: 0.9rem; color: var(--text-secondary);">
-            Confidence: <strong style="color: var(--primary-color);">{{ latest_crop.confidence if latest_crop else 85 }}%</strong>
+            Confidence: <strong style="color: var(--primary-color);">{{ (latest_crop.confidence ~ '%') if latest_crop and latest_crop.confidence else 'No Evaluation Yet' }}</strong>
         </p>
     </div>
 

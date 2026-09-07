@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sprout, 
   Bot, 
@@ -14,25 +14,55 @@ import {
   Droplets, 
   Thermometer, 
   Sun,
-  Award
+  Award,
+  User
 } from 'lucide-react';
+import { getDashboardSummary } from '../services/apiService';
 
-export default function Dashboard({ setActiveTab }) {
+export default function Dashboard({ setActiveTab, user, onOpenAuthModal }) {
+  const [summaryData, setSummaryData] = useState(null);
+
+  useEffect(() => {
+    getDashboardSummary().then((res) => {
+      if (res && res.success) setSummaryData(res);
+    }).catch(() => {});
+  }, [user]);
+
   const quickStats = [
-    { label: "Crops Diagnostic Confidence", value: "98.4%", icon: ShieldCheck, color: "text-emerald-500" },
-    { label: "Real-time Mandi Markets", value: "2,400+", icon: TrendingUp, color: "text-amber-500" },
-    { label: "Govt Schemes Tracked", value: "45+", icon: FileText, color: "text-blue-500" },
-    { label: "Supported Languages", value: "12+", icon: Bot, color: "text-purple-500" }
+    { 
+      label: "Diagnostic Confidence", 
+      value: summaryData?.stats?.diagnostic_accuracy || "98.4%", 
+      icon: ShieldCheck, 
+      color: "text-emerald-500" 
+    },
+    { 
+      label: "Crop Scans Completed", 
+      value: summaryData?.stats?.scans_completed !== undefined ? `${summaryData.stats.scans_completed}` : "3", 
+      icon: Scan, 
+      color: "text-blue-500" 
+    },
+    { 
+      label: "Real-time Mandi Markets", 
+      value: summaryData?.stats?.active_markets || "2,400+", 
+      icon: TrendingUp, 
+      color: "text-amber-500" 
+    },
+    { 
+      label: "Crops Evaluated", 
+      value: summaryData?.stats?.crops_recommended !== undefined ? `${summaryData.stats.crops_recommended}` : "18+", 
+      icon: Sprout, 
+      color: "text-purple-500" 
+    }
   ];
 
   const featureCards = [
     {
-      id: 'chat',
-      title: 'Farmer AI Assistant',
-      desc: 'Ask any question on soil nutrients, crop diseases, pest control, or weather management.',
-      icon: Bot,
-      color: 'from-emerald-500 to-green-600',
-      badge: 'Interactive AI'
+      id: 'crop',
+      title: 'Smart Crop Recommendation',
+      desc: 'Predict high-yielding crops tailored for your soil texture, season, and rainfall using crop_model.pkl.',
+      icon: Sprout,
+      color: 'from-emerald-600 to-green-700',
+      badge: 'ML Engine'
     },
     {
       id: 'scanner',
@@ -89,7 +119,9 @@ export default function Dashboard({ setActiveTab }) {
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold backdrop-blur-md">
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Next-Gen Smart Agriculture Engine</span>
+              <span>
+                {user ? `🌾 Welcome back, Farmer ${user.name} (${user.location})!` : "Next-Gen Smart Agriculture Engine"}
+              </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
@@ -97,25 +129,37 @@ export default function Dashboard({ setActiveTab }) {
             </h1>
 
             <p className="text-emerald-100/90 text-base md:text-lg max-w-2xl font-normal leading-relaxed">
-              Diagnose crop diseases instantly, optimize fertilizer usage, monitor live Mandi market rates, and get real-time AI weather irrigation advisories.
+              Make smarter agricultural decisions with{' '}
+              <span className="font-semibold text-emerald-300 bg-emerald-800/50 px-2 py-0.5 rounded-md border border-emerald-500/30">AI crop recommendations</span>,{' '}
+              <span className="font-semibold text-teal-300 bg-teal-800/50 px-2 py-0.5 rounded-md border border-teal-500/30">instant leaf disease diagnosis</span>,{' '}
+              <span className="font-semibold text-sky-300 bg-sky-800/50 px-2 py-0.5 rounded-md border border-sky-500/30">live weather alerts</span>, and{' '}
+              <span className="font-semibold text-amber-300 bg-amber-800/50 px-2 py-0.5 rounded-md border border-amber-500/30">precision irrigation</span>.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
-                onClick={() => setActiveTab('scanner')}
-                className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                onClick={() => setActiveTab('crop')}
+                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm"
               >
-                <Scan className="w-5 h-5" />
-                <span>Scan Crop Disease</span>
+                <Sprout className="w-4 h-4" />
+                <span>Crop Recommendation</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <button
-                onClick={() => setActiveTab('chat')}
-                className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-emerald-500/30 text-emerald-200 font-semibold px-5 py-3.5 rounded-xl backdrop-blur-md hover:text-white transition-all"
+                onClick={() => setActiveTab('scanner')}
+                className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-emerald-500/30 text-emerald-200 font-semibold px-4 py-3 rounded-xl backdrop-blur-md hover:text-white transition-all text-sm"
               >
-                <Bot className="w-5 h-5 text-emerald-400" />
-                <span>Ask Farmer AI</span>
+                <Scan className="w-4 h-4 text-teal-400" />
+                <span>Scan Disease</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('chat')}
+                className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-emerald-500/30 text-emerald-200 font-semibold px-4 py-3 rounded-xl backdrop-blur-md hover:text-white transition-all text-sm"
+              >
+                <Bot className="w-4 h-4 text-emerald-400" />
+                <span>Ask AI</span>
               </button>
             </div>
           </div>

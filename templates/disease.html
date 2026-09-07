@@ -27,22 +27,58 @@
         </form>
     </div>
 
-    <!-- Disease Diagnosis Output Card -->
-    <div id="diseaseResultCard" class="card" style="display: none; background: #fffde7; border: 2px solid #fbc02d;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fff59d; padding-bottom: 1rem; margin-bottom: 1.2rem;">
+    <!-- Unreliable Warning Box -->
+    <div id="diseaseWarningCard" class="card" style="display: none; background: #fff8e1; border: 2px solid #ffa000; margin-bottom: 2rem;">
+        <div style="display: flex; gap: 1rem; align-items: flex-start;">
+            <div style="font-size: 2rem;">⚠️</div>
             <div>
-                <span style="font-size: 0.85rem; color: #f57f17; font-weight: 700; text-transform: uppercase;">AI Diagnosis Result</span>
-                <h2 id="resDiseaseName" style="font-size: 2.2rem; color: #e65100; margin-top: 2px;">Tomato Early Blight</h2>
-                <div id="resCropCategory" style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; margin-top: 4px;">Target Crop: Tomato</div>
+                <span style="font-size: 0.8rem; font-weight: 800; color: #b78103; text-transform: uppercase; letter-spacing: 0.5px;">⚠️ Low confidence</span>
+                <h3 style="color: #d84315; margin: 4px 0 8px 0; font-size: 1.3rem;">Please upload a clearer image.</h3>
+                <p id="warningConfidenceText" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;"></p>
+                <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #ffe082; font-size: 0.85rem; color: var(--text-primary);">
+                    <strong>💡 Tips for accurate leaf diagnosis:</strong>
+                    <ul style="margin-left: 1.2rem; margin-top: 4px; line-height: 1.5;">
+                        <li>Ensure the infected leaf fills most of the frame</li>
+                        <li>Take photos in clear daylight, avoiding heavy shadows</li>
+                        <li>Hold your camera steady and sharply focused on the leaf lesions</li>
+                    </ul>
+                </div>
             </div>
-            <div style="text-align: right;">
-                <span style="font-size: 0.85rem; color: var(--text-secondary);">Confidence</span>
-                <div id="resDiseaseConfidence" style="font-size: 2.4rem; font-weight: 800; color: #2e7d32;">92%</div>
+        </div>
+    </div>
+
+    <!-- Disease Diagnosis Output Card -->
+    <div id="diseaseResultCard" class="card" style="display: none; background: #ffffff; border: 2px solid var(--primary-light);">
+        
+        <!-- 4-point summary card -->
+        <div style="background: #e8f5e9; border: 1px solid var(--primary-light); padding: 1.2rem; border-radius: 12px; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; border-bottom: 1px dashed #a5d6a7; padding-bottom: 1rem;">
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Detected:</span>
+                    <h2 id="resDiseaseName" style="font-size: 1.5rem; color: var(--primary-dark); margin-top: 2px;">Tomato Early Blight</h2>
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Confidence:</span>
+                    <div id="resDiseaseConfidence" style="font-size: 1.5rem; font-weight: 800; color: #2e7d32; margin-top: 2px;">--%</div>
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Risk:</span>
+                    <div style="margin-top: 4px;">
+                        <span id="resRiskBadge" style="background: #ffebee; color: #c62828; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #ffcdd2;">High</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Recommended action:</span>
+                <p id="resRecommendedAction" style="font-size: 1.05rem; font-weight: 700; color: #1b5e20; margin-top: 4px; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #c8e6c9;">
+                    Remove affected leaves and apply the recommended treatment.
+                </p>
             </div>
         </div>
 
         <div style="margin-bottom: 1.2rem;">
-            <strong style="color: #e65100;">Symptoms & Severity:</strong>
+            <strong style="color: var(--primary-dark);">Symptoms & Severity:</strong>
             <p id="resSymptoms" style="margin-top: 4px; color: var(--text-primary); line-height: 1.5;">
                 Dark concentric rings on older leaves, yellowing foliage margin, premature defoliation.
             </p>
@@ -71,23 +107,52 @@ document.getElementById('diseaseForm').addEventListener('submit', async (e) => {
     const formData = new FormData();
     formData.append('leaf_image', fileInput.files[0]);
 
+    // Hide existing result cards
+    document.getElementById('diseaseResultCard').style.display = 'none';
+    document.getElementById('diseaseWarningCard').style.display = 'none';
+
     try {
-        showToast('Analyzing image with AI Model...', 'info');
+        showToast('Analyzing leaf image with AI Model...', 'info');
         const response = await fetch('/api/detect-disease', {
             method: 'POST',
             body: formData
         });
 
         const result = await response.json();
+
         if (result.success) {
-            document.getElementById('resDiseaseName').textContent = result.disease;
-            document.getElementById('resCropCategory').textContent = 'Target Crop: ' + result.crop;
+            if (result.reliable === false) {
+                // Low confidence or unidentifiable leaf image
+                document.getElementById('warningConfidenceText').textContent = 
+                    result.confidence !== undefined ? `Model confidence was ${result.confidence}%, below the reliable diagnostic threshold (60%).` : '';
+                document.getElementById('diseaseWarningCard').style.display = 'block';
+                document.getElementById('diseaseWarningCard').scrollIntoView({ behavior: 'smooth' });
+                showToast('Unable to identify reliably. Please upload a clearer leaf image.', 'warning');
+                return;
+            }
+
+            // Confident diagnosis result
+            document.getElementById('resDiseaseName').textContent = result.detected || result.disease;
             document.getElementById('resDiseaseConfidence').textContent = result.confidence + '%';
+            document.getElementById('resRiskBadge').textContent = result.risk || 'High';
+            document.getElementById('resRecommendedAction').textContent = result.recommended_action || 'Remove affected leaves and apply the recommended treatment.';
             document.getElementById('resSymptoms').textContent = result.symptoms;
+
+            // Update Risk badge style
+            const riskBadge = document.getElementById('resRiskBadge');
+            if (result.risk === 'Critical') {
+                riskBadge.style.cssText = 'background: #fce4ec; color: #880e4f; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #f8bbd0;';
+            } else if (result.risk === 'High') {
+                riskBadge.style.cssText = 'background: #fff3e0; color: #e65100; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #ffe0b2;';
+            } else if (result.risk === 'Moderate') {
+                riskBadge.style.cssText = 'background: #fff8e1; color: #f57f17; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #ffecb3;';
+            } else {
+                riskBadge.style.cssText = 'background: #e8f5e9; color: #2e7d32; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #c8e6c9;';
+            }
 
             const listElem = document.getElementById('resSuggestionsList');
             listElem.innerHTML = '';
-            result.suggestions.forEach(item => {
+            (result.suggestions || []).forEach(item => {
                 const li = document.createElement('li');
                 li.style.cssText = 'background: white; padding: 10px 14px; border-radius: 6px; border-left: 4px solid var(--primary-color); font-size: 0.95rem; font-weight: 500;';
                 li.innerHTML = `✓ ${item}`;

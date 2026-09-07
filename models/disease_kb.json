@@ -1,74 +1,140 @@
 {
   "Tomato Early Blight": {
     "crop": "Tomato",
+    "detected": "Tomato Early Blight",
     "disease": "Tomato Early Blight (Alternaria solani)",
+    "risk": "High",
     "severity": "Moderate to Severe",
-    "symptoms": "Dark concentric rings (target-board spots) on older leaves, yellowing foliage margin, premature defoliation.",
+    "recommended_action": "Remove affected leaves and apply the recommended treatment.",
+    "symptoms": "Dark concentric rings (target-board spots) on older leaves, yellowing chlorotic halos around lesions, premature leaf drop.",
+    "organicRemedy": "Spray Neem oil solution (3-5 ml/L) or Copper soap fungicide every 7 days. Prune heavily infected lower leaves 12 inches above the soil.",
+    "chemicalRemedy": "Apply Mancozeb 75% WP @ 2g/liter or Copper Oxychloride 50% WP @ 2.5g/liter at first sign of target spots.",
     "suggestions": [
       "Remove affected leaves immediately and destroy them (do not compost).",
       "Avoid overhead watering; irrigate at the soil level to keep foliage dry.",
       "Apply copper-based fungicide or Neem oil solution (2-3 ml/L) every 7-10 days.",
       "Ensure proper plant spacing for sunlight and air circulation.",
       "Rotate tomato crops with non-solanaceous crops (e.g., maize, beans) next season."
+    ],
+    "prevention": [
+      "Use certified disease-free seeds and resistant varieties",
+      "Ensure proper plant spacing for air circulation",
+      "Avoid overhead sprinkler irrigation to keep foliage dry",
+      "Rotate crops annually with non-solanaceous plants"
     ]
   },
   "Potato Late Blight": {
     "crop": "Potato / Tomato",
+    "detected": "Potato Late Blight",
     "disease": "Potato Late Blight (Phytophthora infestans)",
-    "severity": "Critical",
-    "symptoms": "Water-soaked dark lesions on leaf tips/margins, white mold on lower surface during humid weather.",
+    "risk": "Critical",
+    "severity": "Critical (High Spread Rate)",
+    "recommended_action": "Prune infected plant parts immediately and apply systemic fungicide (Mancozeb/Ridomil Gold).",
+    "symptoms": "Water-soaked dark brown/black necrotic lesions on leaf tips, white fungal mold on lower surface during humid weather.",
+    "organicRemedy": "Prune and destroy infected leaves immediately. Spray bio-fungicide containing Bacillus subtilis or copper octanoate.",
+    "chemicalRemedy": "Apply Metalaxyl 8% + Mancozeb 64% (Ridomil Gold) @ 2.5g/liter or Cymoxanil 8% + Mancozeb 64% WP.",
     "suggestions": [
       "Prune infected plant parts immediately to prevent rapid canopy spore spread.",
       "Apply systemic fungicide containing Mancozeb or Ridomil Gold.",
       "Maintain well-drained soil and avoid standing water.",
       "Monitor daily during high humidity and cool damp nights.",
       "Destroy harvested tubers showing surface brown rot."
+    ],
+    "prevention": [
+      "Plant certified blight-free seed tubers",
+      "Ensure good field drainage and avoid waterlogging",
+      "Destroy crop residues and cull piles post-harvest",
+      "Apply preventative copper spray prior to rainy spells"
     ]
   },
   "Rice Leaf Blast": {
     "crop": "Rice",
+    "detected": "Rice Leaf Blast",
     "disease": "Rice Leaf Blast (Magnaporthe oryzae)",
+    "risk": "High",
     "severity": "High",
-    "symptoms": "Spindle-shaped or diamond-shaped lesions with grayish-white centers and reddish-brown borders.",
+    "recommended_action": "Spray Tricyclazole 75 WP @ 0.6 g/L and maintain proper paddy water levels.",
+    "symptoms": "Spindle-shaped or diamond-shaped lesions with grayish-white centers and reddish-brown borders on leaf blades.",
+    "organicRemedy": "Spray Pseudomonas fluorescens @ 10g/L or 5% Neem Seed Kernel Extract (NSKE) at early tiller emergence.",
+    "chemicalRemedy": "Spray Tricyclazole 75% WP @ 0.6g/L water or Isoprothiolane 40% EC @ 1.5ml/L at first appearance of blast lesions.",
     "suggestions": [
       "Avoid excessive nitrogenous fertilizer application.",
       "Maintain 2-5 cm standing water layer in paddy field to reduce spore germ tube entry.",
       "Spray Tricyclazole 75 WP @ 0.6 g/L water at first appearance of lesions.",
       "Select blast-resistant rice cultivars for the next sowing cycle."
+    ],
+    "prevention": [
+      "Avoid excess nitrogenous fertilizer (split N applications)",
+      "Keep field flooded during tillering stage",
+      "Treat seeds with Carbendazim or Tricyclazole before nursery sowing",
+      "Plant blast-tolerant regional paddy cultivars"
     ]
   },
   "Cotton Bacterial Blight": {
     "crop": "Cotton",
+    "detected": "Cotton Bacterial Blight",
     "disease": "Cotton Angular Leaf Spot / Bacterial Blight (Xanthomonas citri)",
+    "risk": "Moderate",
     "severity": "Moderate",
-    "symptoms": "Angular dark water-soaked spots bounded by leaf veins, stem black arm lesions.",
+    "recommended_action": "Spray Streptocycline mixed with Copper Oxychloride and remove infected plant debris.",
+    "symptoms": "Angular dark water-soaked spots bounded strictly by leaf veins, progressing to systemic stem black-arm lesions.",
+    "organicRemedy": "Spray 5% NSKE (Neem seed kernel extract) and prune diseased twigs during clear dry weather.",
+    "chemicalRemedy": "Spray Streptocycline (100 ppm, approx 1g/10L) mixed with Copper Oxychloride 50% WP @ 2.5g/L water.",
     "suggestions": [
       "Spray Streptocycline (100 ppm) mixed with Copper Oxychloride (0.25%).",
       "Use delinted and seed-treated disease-free certified cotton seeds.",
       "Remove infected crop residue from the field post-harvest.",
       "Avoid flood irrigation that carries bacteria between rows."
+    ],
+    "prevention": [
+      "Use acid-delinted certified disease-free cotton seeds",
+      "Avoid furrow/flood irrigation that spreads bacteria along rows",
+      "Deep summer plowing to bury previous crop debris",
+      "Maintain wider row spacing for rapid morning leaf drying"
     ]
   },
   "Corn Common Rust": {
     "crop": "Maize / Corn",
+    "detected": "Corn Common Rust",
     "disease": "Corn Common Rust (Puccinia sorghi)",
+    "risk": "Moderate",
     "severity": "Low to Moderate",
-    "symptoms": "Small brownish-red pustules on both upper and lower leaf surfaces.",
+    "recommended_action": "Apply foliar fungicide (Mancozeb @ 2g/L) and plant rust-resistant hybrids.",
+    "symptoms": "Small cinnamon-brown to reddish-orange raised powdery pustules scattered across upper and lower leaf surfaces.",
+    "organicRemedy": "Dust sulfur powder (25-30 kg/ha) or spray bio-control formulation of Trichoderma viride.",
+    "chemicalRemedy": "Apply Azoxystrobin 18.2% + Difenoconazole 11.4% SC @ 1ml/L or Mancozeb 75% WP @ 2g/L if infection exceeds 10% before silking.",
     "suggestions": [
       "Apply foliar fungicide (Mancozeb @ 2g/L) if infection occurs before silking stage.",
       "Plant rust-resistant hybrid corn varieties.",
       "Ensure balanced soil potassium levels to improve natural immunity."
+    ],
+    "prevention": [
+      "Plant rust-resistant hybrid corn varieties",
+      "Destroy infected crop residues after harvest",
+      "Maintain optimal plant density for sunlight penetration",
+      "Ensure balanced soil potassium to improve natural crop defense"
     ]
   },
   "Healthy Leaf": {
     "crop": "General Crop",
-    "disease": "Healthy Plant Leaf (No Disease Detected)",
+    "detected": "Healthy Leaf (No Disease Detected)",
+    "disease": "Healthy Plant Leaf (Optimal Health)",
+    "risk": "None (Healthy)",
     "severity": "None",
-    "symptoms": "Vibrant green leaf color, smooth leaf texture, no fungal lesions or chlorosis.",
+    "recommended_action": "No chemical action required. Maintain regular irrigation, balanced nutrition, and routine scouting.",
+    "symptoms": "Vibrant green leaf coloration, uniform chlorophyll pigmentation, smooth intact cuticle, no lesions or chlorosis.",
+    "organicRemedy": "Continue current organic schedule with well-decomposed farmyard manure (FYM) and bio-fertilizers.",
+    "chemicalRemedy": "No chemical treatment required. Preserve beneficial predatory insects and pollinator populations.",
     "suggestions": [
       "Continue regular irrigation and balanced fertilization (NPK).",
       "Monitor weekly for early pest or disease signs.",
       "Maintain optimal field weed control and healthy soil organic carbon."
+    ],
+    "prevention": [
+      "Maintain weekly crop scouting",
+      "Ensure balanced N-P-K nutrient and micronutrient supply",
+      "Keep field borders clean of alternate weed hosts",
+      "Practice timely crop rotation"
     ]
   }
 }

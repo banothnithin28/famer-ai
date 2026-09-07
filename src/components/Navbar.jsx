@@ -12,16 +12,29 @@ import {
   Moon, 
   Menu, 
   X,
-  CheckCircle2
+  CheckCircle2,
+  User,
+  LogOut
 } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, darkMode, setDarkMode, onOpenApiKeyModal, apiKey }) {
+export default function Navbar({ 
+  activeTab, 
+  setActiveTab, 
+  darkMode, 
+  setDarkMode, 
+  onOpenApiKeyModal, 
+  apiKey,
+  user,
+  onOpenAuthModal,
+  onLogout
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Sprout },
-    { id: 'chat', label: 'Farmer AI Chat', icon: Bot, badge: 'AI' },
+    { id: 'crop', label: 'Crop Advisor', icon: Sprout, badge: 'ML' },
     { id: 'scanner', label: 'Crop Scanner', icon: Scan, badge: 'Vision' },
+    { id: 'chat', label: 'Farmer AI Chat', icon: Bot, badge: 'AI' },
     { id: 'weather', label: 'Weather Guard', icon: CloudSun },
     { id: 'market', label: 'Mandi Rates', icon: TrendingUp },
     { id: 'schemes', label: 'Govt Schemes', icon: FileText },
@@ -85,6 +98,32 @@ export default function Navbar({ activeTab, setActiveTab, darkMode, setDarkMode,
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Farmer Auth Button */}
+            {user ? (
+              <div className="flex items-center gap-1.5">
+                <div className="hidden sm:flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold px-2.5 py-1.5 rounded-lg">
+                  <User className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{user.name}</span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  title="Sign Out"
+                  className="text-xs font-semibold px-2 py-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Logout</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onOpenAuthModal}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Farmer Login</span>
+              </button>
+            )}
+
             {/* Gemini API Key indicator */}
             <button
               onClick={onOpenApiKeyModal}

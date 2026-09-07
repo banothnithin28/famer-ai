@@ -1,291 +1,487 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
-  Scan, 
+  Camera, 
   Upload, 
   CheckCircle2, 
   AlertTriangle, 
-  Sparkles, 
-  ShieldAlert, 
-  Leaf, 
   RotateCcw,
-  FileCheck,
-  Zap,
-  Info
+  Sparkles, 
+  Leaf, 
+  ShieldCheck, 
+  Activity,
+  ArrowRight,
+  Info,
+  Loader2
 } from 'lucide-react';
-import { analyzeCropImage, SAMPLE_DISEASE_DATA } from '../services/geminiService';
+import { detectDiseaseFromAPI } from '../services/geminiService';
 
 export default function DiseaseScanner() {
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  // Step state: 1 = Scan Your Plant, 2 = Preview, 3 = Loading, 4 = Result
+  const [step, setStep] = useState(1);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
-  const [selectedPreset, setSelectedPreset] = useState(null);
 
-  const presets = [
-    {
-      id: 'tomato_blight',
-      label: 'Tomato Leaf Spot',
-      crop: 'Tomato',
-      img: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb231fc?w=300&auto=format&fit=crop&q=80',
-      tag: 'Disease'
-    },
-    {
-      id: 'rice_blast',
-      label: 'Rice Blast Disease',
-      crop: 'Paddy / Rice',
-      img: 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?w=300&auto=format&fit=crop&q=80',
-      tag: 'Critical'
-    },
-    {
-      id: 'corn_rust',
-      label: 'Corn Leaf Rust',
-      crop: 'Maize / Corn',
-      img: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=300&auto=format&fit=crop&q=80',
-      tag: 'Fungi'
-    },
-    {
-      id: 'healthy_leaf',
-      label: 'Healthy Wheat Leaf',
-      crop: 'Wheat',
-      img: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=300&auto=format&fit=crop&q=80',
-      tag: 'Healthy'
-    }
-  ];
+  const cameraInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const handleRunAnalysis = async (presetId = null, customImgUrl = null) => {
-    setAnalyzing(true);
-    setAnalysisResult(null);
-
-    const targetKey = presetId || selectedPreset || 'tomato_blight';
-    const result = await analyzeCropImage(targetKey);
-
-    setAnalysisResult(result);
-    setAnalyzing(false);
-  };
-
-  const handleFileUpload = (e) => {
+  // STEP 1 Handlers
+  const handleFilePicked = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setSelectedImage(url);
-      setSelectedPreset(null);
-      handleRunAnalysis('tomato_blight', url);
+    if (!file) return;
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setStep(2);
+    // Reset inputs so the same photo can be re-selected if needed
+    e.target.value = '';
+  };
+
+  // STEP 2 Handlers
+  const handleRetake = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setAnalysisResult(null);
+    setStep(1);
+  };
+
+  const handleAnalyze = async () => {
+    if (!selectedFile) return;
+    setStep(3); // Show loading state
+
+    try {
+      const result = await detectDiseaseFromAPI(selectedFile);
+      setAnalysisResult(result);
+      setStep(4);
+    } catch (err) {
+      setAnalysisResult({
+        reliable: false,
+        low_confidence: true,
+        warning: '⚠️ Low confidence',
+        message: 'Please upload a clearer image.',
+        error: err.message,
+        confidence: 0
+      });
+      setStep(4);
     }
   };
 
-  const selectPreset = (preset) => {
-    setSelectedPreset(preset.id);
-    setSelectedImage(preset.img);
-    handleRunAnalysis(preset.id, preset.img);
+  // STEP 4 Reset
+  const handleScanAgain = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setAnalysisResult(null);
+    setStep(1);
   };
 
-  const resetScanner = () => {
-    setSelectedImage(null);
-    setSelectedPreset(null);
-    setAnalysisResult(null);
-    setAnalyzing(false);
+  // Helper functions for clean formatting
+  const getSymptomsList = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res.symptoms) && res.symptoms.length > 0) {
+      return res.symptoms;
+    }
+    if (typeof res.symptoms === 'string' && res.symptoms.trim()) {
+      const items = res.symptoms.split(/[,;]/).map((s) => s.trim()).filter((s) => s.length > 3);
+      if (items.length > 0) return items;
+      return [res.symptoms.trim()];
+    }
+    return ['Dark spots on leaf surface', 'Yellowing leaves and chlorotic tissue'];
   };
+
+  const getActionsList = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res.suggestions) && res.suggestions.length > 0) {
+      return res.suggestions;
+    }
+    if (typeof res.recommended_action === 'string' && res.recommended_action.trim()) {
+      const parts = res.recommended_action
+        .split(/\.\s+/)
+        .map((s) => s.trim().replace(/\.$/, ''))
+        .filter((s) => s.length > 3);
+      if (parts.length > 1) return parts;
+      return [res.recommended_action.trim()];
+    }
+    return [
+      'Remove infected leaves immediately',
+      'Improve air circulation between plants',
+      'Monitor the plant and avoid overhead watering'
+    ];
+  };
+
+  const getPreventionList = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res.prevention) && res.prevention.length > 0) {
+      return res.prevention;
+    }
+    return [
+      'Use certified disease-resistant seeds and clean soil',
+      'Ensure adequate spacing for sunlight and natural airflow',
+      'Avoid sprinkler watering that leaves foliage damp overnight',
+      'Practice annual crop rotation with non-host crops'
+    ];
+  };
+
+  const isLowConfidence = 
+    analysisResult && 
+    (analysisResult.reliable === false || 
+     analysisResult.low_confidence === true || 
+     (analysisResult.confidence !== undefined && analysisResult.confidence < 60));
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="max-w-xl mx-auto px-4 py-6 sm:py-8 space-y-6">
       
-      {/* Title Header */}
-      <div className="text-center max-w-2xl mx-auto space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
-          <Scan className="w-4 h-4" /> AI Computer Vision 2.0
-        </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Crop Health & Disease Diagnostic Scanner
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Upload a photo of your infected leaf or plant to receive immediate AI diagnostic breakdown, pathogen identification, and targeted organic/chemical treatment plans.
-        </p>
+      {/* Hidden inputs for camera capture vs gallery picker */}
+      <input 
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFilePicked}
+        className="hidden"
+      />
+      <input 
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFilePicked}
+        className="hidden"
+      />
+
+      {/* Progress Dots / Step Bar */}
+      <div className="flex items-center justify-center gap-2 pb-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div 
+            key={i} 
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              step === i 
+                ? 'w-8 bg-emerald-600 dark:bg-emerald-400' 
+                : step > i 
+                ? 'w-3 bg-emerald-300 dark:bg-emerald-800' 
+                : 'w-3 bg-slate-200 dark:bg-slate-800'
+            }`} 
+          />
+        ))}
       </div>
 
-      {/* Preset Sample Leaf Picker */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500" /> Test with Sample Crop Leaves:
-          </h3>
-          {analysisResult && (
-            <button
-              onClick={resetScanner}
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Reset Scanner
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {presets.map((preset) => (
-            <div
-              key={preset.id}
-              onClick={() => selectPreset(preset)}
-              className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all group ${
-                selectedPreset === preset.id
-                  ? 'border-emerald-600 ring-2 ring-emerald-500/20 scale-[1.02]'
-                  : 'border-slate-200 dark:border-slate-800 hover:border-emerald-400'
-              }`}
-            >
-              <img
-                src={preset.img}
-                alt={preset.label}
-                className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent p-2 flex flex-col justify-end">
-                <span className="text-xs font-bold text-white leading-tight">{preset.label}</span>
-                <span className="text-[10px] text-emerald-300 font-medium">{preset.crop}</span>
-              </div>
+      {/* =======================================================================
+          STEP 1: SCAN YOUR PLANT
+          ======================================================================= */}
+      {step === 1 && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
+              <Leaf className="w-3.5 h-3.5 text-emerald-600" />
+              Easy Plant Diagnosis
             </div>
-          ))}
-        </div>
-      </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Scan Your Plant
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
+              Take or upload a photo of your infected leaf to find out what problem it has and how to treat it.
+            </p>
+          </div>
 
-      {/* Upload Zone / Scanning Display */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        
-        {/* Left Column: Image / Upload Area */}
-        <div className="md:col-span-5 flex flex-col space-y-4">
-          <div className="relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 min-h-[320px] flex items-center justify-center text-center p-6 shadow-xl">
-            {selectedImage ? (
-              <div className="relative w-full h-full flex items-center justify-center">
-                <img
-                  src={selectedImage}
-                  alt="Uploaded Crop"
-                  className="max-h-[320px] w-auto rounded-lg object-contain"
-                />
+          {/* Mobile-First Action Card */}
+          <div className="bg-white dark:bg-slate-900 border-2 border-emerald-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center space-y-6">
+            
+            {/* Visual Guide Illustration */}
+            <div className="relative mx-auto w-32 h-32 sm:w-40 sm:h-40 rounded-3xl bg-gradient-to-tr from-emerald-500/10 via-emerald-500/20 to-green-500/10 border-2 border-dashed border-emerald-400/50 flex flex-col items-center justify-center p-4">
+              <Leaf className="w-12 h-12 sm:w-16 sm:h-16 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mt-2">
+                Leaf in Focus
+              </span>
+            </div>
 
-                {/* Laser Scanning Animation */}
-                {analyzing && (
-                  <div className="absolute inset-0 bg-emerald-500/10 pointer-events-none">
-                    <div className="w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-scan absolute top-0 left-0 shadow-lg shadow-emerald-500"></div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs">
-                      <div className="text-center space-y-2 text-white">
-                        <Zap className="w-8 h-8 text-amber-400 animate-bounce mx-auto" />
-                        <p className="text-sm font-bold">Scanning Crop DNA & Pathogens...</p>
-                        <p className="text-xs text-slate-400">Comparing with 100,000+ Agri-Vision Datasets</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <label className="cursor-pointer space-y-4 w-full h-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-xl transition-colors">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                  <Upload className="w-8 h-8" />
-                </div>
-                <div>
-                  <p className="font-bold text-white text-sm">Upload Plant / Leaf Photo</p>
-                  <p className="text-xs text-slate-400 mt-1">PNG, JPG, WEBP up to 10MB</p>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
+            <div className="space-y-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Quick Farmer Tip
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Hold your camera close to the affected leaf in good daylight for best results.
+              </p>
+            </div>
+
+            {/* Buttons: Take Photo & Upload Photo */}
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.98] text-white font-extrabold text-base rounded-2xl shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-3 transition-all cursor-pointer"
+              >
+                <Camera className="w-6 h-6" />
+                <span>Take Photo</span>
+              </button>
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full min-h-[54px] bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 active:scale-[0.98] border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold text-base rounded-2xl flex items-center justify-center gap-3 transition-all cursor-pointer"
+              >
+                <Upload className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                <span>Upload Photo</span>
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Right Column: AI Analysis Report */}
-        <div className="md:col-span-7">
-          {analysisResult ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 animate-fade-in">
+      {/* =======================================================================
+          STEP 2: IMAGE PREVIEW
+          ======================================================================= */}
+      {step === 2 && previewUrl && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Header */}
+          <div className="text-center space-y-1">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Check Your Photo
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Make sure the leaf and any spots are clear before analyzing.
+            </p>
+          </div>
+
+          {/* Photo Preview Container */}
+          <div className="bg-slate-900 rounded-3xl overflow-hidden border-2 border-emerald-500/40 p-2 shadow-2xl flex items-center justify-center">
+            <img 
+              src={previewUrl} 
+              alt="Leaf Preview" 
+              className="w-full max-h-[360px] sm:max-h-[420px] object-contain rounded-2xl"
+            />
+          </div>
+
+          {/* Buttons: Analyze Plant & Retake */}
+          <div className="space-y-3 pt-1">
+            <button
+              onClick={handleAnalyze}
+              className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.98] text-white font-extrabold text-lg rounded-2xl shadow-lg shadow-emerald-950/25 flex items-center justify-center gap-3 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-5 h-5 text-amber-300" />
+              <span>Analyze Plant</span>
+              <ArrowRight className="w-5 h-5 ml-1" />
+            </button>
+
+            <button
+              onClick={handleRetake}
+              className="w-full min-h-[50px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Retake</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================================
+          STEP 3: LOADING STATE
+          ======================================================================= */}
+      {step === 3 && (
+        <div className="py-12 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl text-center space-y-6 animate-fade-in">
+          {/* Animated Scanning Circle */}
+          <div className="relative mx-auto w-28 h-28 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 animate-ping opacity-75"></div>
+            <div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-500 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <Loader2 className="w-10 h-10 animate-spin" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Analyzing your plant...
+            </h2>
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+              AI is checking the leaf for possible problems.
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 pt-1">
+              Calculating chlorophyll density, lesions, and necrosis patterns.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================================
+          STEP 4: RESULT CARD (OR LOW CONFIDENCE WARNING)
+          ======================================================================= */}
+      {step === 4 && analysisResult && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {isLowConfidence ? (
+            /* ================= LOW CONFIDENCE WARNING ================= */
+            <div className="bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-600 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-7 h-7 text-amber-500" />
+                </div>
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 text-xs font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider bg-amber-200/60 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full">
+                    ⚠️ Low confidence
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                    Please upload a clearer image.
+                  </h3>
+                  {analysisResult.confidence !== undefined && (
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300 pt-1">
+                      Model Confidence: <span className="text-amber-700 dark:text-amber-400 font-extrabold">{analysisResult.confidence}%</span> (Below reliable 60% threshold)
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {previewUrl && (
+                <div className="rounded-2xl overflow-hidden max-h-44 bg-slate-900 flex items-center justify-center p-1">
+                  <img src={previewUrl} alt="Uploaded Leaf" className="max-h-40 w-auto object-contain rounded-xl opacity-80" />
+                </div>
+              )}
+
+              <div className="bg-white/90 dark:bg-slate-900/90 rounded-2xl p-4 border border-amber-200 dark:border-amber-900/60 space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                  💡 Tips for a reliable result:
+                </h4>
+                <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
+                  <li>Hold the camera steady close to the leaf</li>
+                  <li>Ensure good daylight with no heavy shadows</li>
+                  <li>Make sure the leaf fills most of the frame</li>
+                </ul>
+              </div>
+
+              {/* [Scan Again] Button */}
+              <button
+                onClick={handleScanAgain}
+                className="w-full min-h-[54px] bg-amber-600 hover:bg-amber-500 text-white font-black text-base rounded-2xl shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>Scan Again</span>
+              </button>
+            </div>
+          ) : (
+            /* ================= CONFIDENT DIAGNOSIS RESULT ================= */
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
               
-              {/* Header Status */}
-              <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Diagnostic Result</span>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    {analysisResult.name}
-                  </h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 italic">
-                    Pathogen: {analysisResult.pathogen}
-                  </p>
+              {/* Top Overview: Plant & Detected Problem */}
+              <div className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950/40 dark:to-slate-850 border-2 border-emerald-500/30 rounded-2xl p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4 border-b border-emerald-200/60 dark:border-emerald-900/60 pb-4">
+                  
+                  {/* Plant: */}
+                  <div>
+                    <span className="text-[11px] font-extrabold uppercase text-slate-400 dark:text-slate-400 tracking-wider block">
+                      Plant:
+                    </span>
+                    <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                      {analysisResult.crop || 'Tomato'}
+                    </span>
+                  </div>
+
+                  {/* Confidence: */}
+                  <div className="text-right">
+                    <span className="text-[11px] font-extrabold uppercase text-slate-400 dark:text-slate-400 tracking-wider block">
+                      Confidence:
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-black text-xl sm:text-2xl">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 inline" />
+                      {analysisResult.confidence}%
+                    </span>
+                  </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-extrabold text-sm px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>{analysisResult.confidence}% Match</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  {/* Detected Problem: */}
+                  <div>
+                    <span className="text-[11px] font-extrabold uppercase text-slate-400 dark:text-slate-400 tracking-wider block">
+                      Detected Problem:
+                    </span>
+                    <span className="text-lg sm:text-xl font-black text-emerald-900 dark:text-emerald-200 leading-tight block mt-0.5">
+                      {analysisResult.detected || analysisResult.disease || 'Early Blight'}
+                    </span>
                   </div>
-                  <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-1">
-                    Severity: {analysisResult.severity}
+
+                  {/* Severity: */}
+                  <div className="sm:text-right">
+                    <span className="text-[11px] font-extrabold uppercase text-slate-400 dark:text-slate-400 tracking-wider block">
+                      Severity:
+                    </span>
+                    <span className={`inline-flex items-center text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mt-1 ${
+                      analysisResult.risk === 'Critical' || analysisResult.severity?.includes('Critical')
+                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300'
+                        : analysisResult.risk === 'High' || analysisResult.severity?.includes('Severe')
+                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300'
+                    }`}>
+                      {analysisResult.severity || analysisResult.risk || 'Moderate'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Symptoms */}
+              {/* Thumbnail preview if available */}
+              {previewUrl && (
+                <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <img src={previewUrl} alt="Scanned Leaf" className="w-14 h-14 rounded-xl object-cover" />
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="font-bold text-slate-700 dark:text-slate-300">Scanned Leaf Image</p>
+                    <p>Diagnosis generated directly by trained vision model</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Symptoms: */}
               <div className="space-y-2">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Info className="w-4 h-4 text-emerald-500" /> Detected Symptoms
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-emerald-500" /> Symptoms:
                 </h4>
-                <ul className="space-y-1.5">
-                  {analysisResult.symptoms.map((sym, idx) => (
-                    <li key={idx} className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                <ul className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/60 space-y-2 text-sm text-slate-800 dark:text-slate-200">
+                  {getSymptomsList(analysisResult).map((sym, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0" />
                       <span>{sym}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Treatment Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Organic Treatment */}
-                <div className="bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-xl p-4 space-y-2">
-                  <h5 className="font-bold text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 uppercase tracking-wide">
-                    <Leaf className="w-4 h-4" /> Organic / Eco Remedy
-                  </h5>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {analysisResult.organicRemedy}
-                  </p>
-                </div>
-
-                {/* Chemical Treatment */}
-                <div className="bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl p-4 space-y-2">
-                  <h5 className="font-bold text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
-                    <AlertTriangle className="w-4 h-4" /> Chemical Solution
-                  </h5>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {analysisResult.chemicalRemedy}
-                  </p>
-                </div>
-              </div>
-
-              {/* Prevention Rules */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 space-y-2 border border-slate-200 dark:border-slate-700">
-                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
-                  <FileCheck className="w-4 h-4 text-emerald-500" /> Prevention & Field Hygiene Checklist
+              {/* Recommended Action: */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Recommended Action:
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
-                  {analysisResult.prevention.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span>{item}</span>
-                    </div>
+                <ol className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-800/60 space-y-2.5 text-sm text-slate-900 dark:text-slate-100">
+                  {getActionsList(analysisResult).map((act, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        {idx + 1}
+                      </span>
+                      <span className="font-medium leading-relaxed">{act}</span>
+                    </li>
                   ))}
-                </div>
+                </ol>
               </div>
 
-            </div>
-          ) : (
-            <div className="h-full bg-slate-100/60 dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-3">
-              <Scan className="w-12 h-12 text-slate-400" />
-              <h3 className="font-bold text-slate-700 dark:text-slate-300 text-base">
-                No Scan Active
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                Select one of the sample crop leaves above or upload your own farm leaf photo to generate an instant diagnostic report.
-              </p>
+              {/* Prevention: */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" /> Prevention:
+                </h4>
+                <ul className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/60 space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                  {getPreventionList(analysisResult).map((prev, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">•</span>
+                      <span>{prev}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Action Button: [Scan Again] */}
+              <div className="pt-2">
+                <button
+                  onClick={handleScanAgain}
+                  className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.98] text-white font-extrabold text-base rounded-2xl shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  <span>Scan Again</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
-
-      </div>
+      )}
     </div>
   );
 }

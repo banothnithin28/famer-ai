@@ -16,7 +16,10 @@
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <div class="form-header-flex">
+                    <label for="password">Password</label>
+                    <a href="{{ url_for('forgot_password') }}" class="forgot-link" data-i18n="forgotPassword">Forgot Password?</a>
+                </div>
                 <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required value="password123">
             </div>
 
