@@ -9,7 +9,6 @@ import MarketPrices from './components/MarketPrices';
 import SchemesFinder from './components/SchemesFinder';
 import FertilizerCalc from './components/FertilizerCalc';
 import PlantDetails from './components/PlantDetails';
-import ApiKeyModal from './components/ApiKeyModal';
 import AuthModal from './components/AuthModal';
 import { getCurrentUser, logoutFarmer } from './services/apiService';
 import { Sprout, Heart } from 'lucide-react';
@@ -17,17 +16,12 @@ import { Sprout, Heart } from 'lucide-react';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [darkMode, setDarkMode] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [selectedPlantId, setSelectedPlantId] = useState(null);
+  const [chatPlantId, setChatPlantId] = useState(null);
 
   useEffect(() => {
-    // Load stored Gemini key
-    const saved = localStorage.getItem('farmer_ai_gemini_key');
-    if (saved) setApiKey(saved);
-
     // Dark mode class on root html
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -42,15 +36,6 @@ export default function App() {
       }
     }).catch(() => {});
   }, [darkMode]);
-
-  const handleSaveApiKey = (key) => {
-    setApiKey(key);
-    if (key) {
-      localStorage.setItem('farmer_ai_gemini_key', key);
-    } else {
-      localStorage.removeItem('farmer_ai_gemini_key');
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -68,8 +53,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
-        onOpenApiKeyModal={() => setApiKeyModalOpen(true)}
-        apiKey={apiKey}
+        onOpenHistory={() => setActiveTab(selectedPlantId ? 'plant-details' : 'dashboard')}
         user={user}
         onOpenAuthModal={() => setAuthModalOpen(true)}
         onLogout={handleLogout}
@@ -89,9 +73,9 @@ export default function App() {
           />
         )}
         {activeTab === 'crop' && <CropAdvisor setActiveTab={setActiveTab} />}
-        {activeTab === 'chat' && <AIChatbot apiKey={apiKey} />}
-        {activeTab === 'scanner' && <DiseaseScanner plantId={selectedPlantId} onOpenPlantDetails={(plantId) => { setSelectedPlantId(plantId); setActiveTab('plant-details'); }} />}
-        {activeTab === 'plant-details' && <PlantDetails plantId={selectedPlantId} onBack={() => setActiveTab('dashboard')} />}
+        {activeTab === 'chat' && <AIChatbot plantId={chatPlantId} />}
+        {activeTab === 'scanner' && <DiseaseScanner plantId={selectedPlantId} onAskAI={() => { setChatPlantId(selectedPlantId); setActiveTab('chat'); }} onOpenPlantDetails={(plantId) => { setSelectedPlantId(plantId); setActiveTab('plant-details'); }} />}
+        {activeTab === 'plant-details' && <PlantDetails plantId={selectedPlantId} onAskAI={() => { setChatPlantId(selectedPlantId); setActiveTab('chat'); }} onBack={() => setActiveTab('dashboard')} />}
         {activeTab === 'weather' && <WeatherAdvisor />}
         {activeTab === 'market' && <MarketPrices />}
         {activeTab === 'schemes' && <SchemesFinder />}
@@ -114,18 +98,10 @@ export default function App() {
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-right flex items-center gap-1">
-            Built with <Heart className="w-3.5 h-3.5 text-rose-500 inline fill-rose-500" /> for Farmers & Agriculture Worldwide
+            Made by Nithin with love for Farmers
           </p>
         </div>
       </footer>
-
-      {/* Gemini API Key Configuration Modal */}
-      <ApiKeyModal
-        isOpen={apiKeyModalOpen}
-        onClose={() => setApiKeyModalOpen(false)}
-        apiKey={apiKey}
-        onSaveKey={handleSaveApiKey}
-      />
 
       {/* Farmer Auth Modal (Login / Register / Forgot Password) */}
       <AuthModal

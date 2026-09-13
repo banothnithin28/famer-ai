@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n backend,frontend -c green,blue \"python app.py\" \"vite\"",
+    "dev:frontend": "vite",
+    "dev:backend": "python app.py",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -12,13 +14,15 @@
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
+    "concurrently": "^9.1.2",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.10",
     "vite": "^5.4.2"

@@ -15,13 +15,14 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { askFarmerAI } from '../services/geminiService';
+import { getPlants } from '../services/apiService';
 
-export default function AIChatbot({ apiKey }) {
+export default function AIChatbot({ plantId = null }) {
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: 'ai',
-      text: "Namaste & Welcome! 🌾 I am **Farmer AI**, your smart agricultural assistant.\n\nAsk me anything about **crop diseases**, **fertilizers**, **pesticides**, **irrigation**, or **Mandi market trends**.",
+      text: "Namaste! 🌾 I am **Farmer AI**.\n\nAsk me about your crops, plants, leaves, watering, or farming problems.",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -31,17 +32,39 @@ export default function AIChatbot({ apiKey }) {
   const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [selectedLang, setSelectedLang] = useState('English');
+  const [plants, setPlants] = useState([]);
+  const [selectedPlantId, setSelectedPlantId] = useState(plantId || '');
+  const [weatherLocation, setWeatherLocation] = useState(null);
   const chatEndRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const presetQueries = [
-    "🍅 How to treat Late Blight in tomato crops?",
-    "🌾 What is the recommended NPK fertilizer for Wheat?",
-    "💧 Should I irrigate my crops when rain is expected?",
-    "📈 Best strategy for selling paddy at Mandi?",
-    "🐛 How to control stem borer organically in maize?"
+    'What is wrong with my plant?',
+    'Should I water my crop today?',
+    'Will rain affect my crop?',
+    'How can I prevent pests?',
+    'How do I care for this plant?',
+    'Explain my plant history'
   ];
 
-  const languages = ['English', 'Hindi (हिंदी)', 'Telugu (తెలుగు)', 'Spanish (Español)', 'Tamil (தமிழ்)'];
+  const languages = ['English', 'తెలుగు', 'हिन्दी', 'தமிழ்'];
+
+  useEffect(() => {
+    setSelectedPlantId(plantId || '');
+    getPlants().then((result) => {
+      if (result?.success) setPlants(result.plants || []);
+    }).catch(() => {});
+  }, [plantId]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return undefined;
+    navigator.geolocation.getCurrentPosition(
+      (position) => setWeatherLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      () => setWeatherLocation(null),
+      { enableHighAccuracy: false, maximumAge: 600000, timeout: 5000 }
+    );
+    return undefined;
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,7 +86,10 @@ export default function AIChatbot({ apiKey }) {
     setLoading(true);
 
     try {
-      const response = await askFarmerAI(query, apiKey);
+      const history = messages.slice(-8).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', text: m.text }));
+      const languageCode = selectedLang === 'हिन्दी' ? 'hi' : selectedLang === 'తెలుగు' ? 'te' : selectedLang === 'தமிழ்' ? 'ta' : 'en';
+      const response = await askFarmerAI(query, history, languageCode, selectedPlantId || null, weatherLocation);
+
       const aiMsg = {
         id: Date.now() + 1,
         sender: 'ai',
@@ -77,7 +103,7 @@ export default function AIChatbot({ apiKey }) {
         {
           id: Date.now() + 1,
           sender: 'ai',
-          text: "⚠️ Sorry, I encountered an error fetching AI guidance. Please try again.",
+          text: "Farmer AI is temporarily unavailable. Please try again.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -104,15 +130,24 @@ export default function AIChatbot({ apiKey }) {
   };
 
   const toggleVoice = () => {
-    if (isListening) {
-      setIsListening(false);
-    } else {
-      setIsListening(true);
-      setTimeout(() => {
-        setInputQuery("How to control thrips and yellow leaf curl in chili plants?");
-        setIsListening(false);
-      }, 2500);
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setInputQuery((current) => current || 'Voice input is not supported in this browser.');
+      return;
     }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = selectedLang === 'తెలుగు' ? 'te-IN' : selectedLang === 'हिन्दी' ? 'hi-IN' : selectedLang === 'தமிழ்' ? 'ta-IN' : 'en-IN';
+    recognition.onresult = (event) => setInputQuery(event.results[0][0].transcript);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
   };
 
   return (
@@ -126,13 +161,13 @@ export default function AIChatbot({ apiKey }) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="font-bold text-lg leading-tight">Farmer AI Assistant</h2>
+              <h2 className="font-bold text-lg leading-tight">🌾 Gemini Farmer Assistant</h2>
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
               </span>
             </div>
-            <p className="text-xs text-emerald-100/80">Always active • 24/7 Agronomist Advisory</p>
+            <p className="text-xs text-emerald-100/80">Ask about your crop, plant health, diseases, weather and farming.</p>
           </div>
         </div>
 
@@ -164,10 +199,20 @@ export default function AIChatbot({ apiKey }) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+        <Sprout className="h-4 w-4 text-emerald-600" />
+        <label htmlFor="assistant-plant" className="text-xs font-bold text-slate-500">Plant context:</label>
+        <select id="assistant-plant" value={selectedPlantId} onChange={(event) => setSelectedPlantId(event.target.value)} className="min-h-9 max-w-[240px] rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <option value="">No plant selected</option>
+          {plants.map((plant) => <option key={plant.id} value={plant.id}>{plant.crop_name} - {plant.field_name}</option>)}
+        </select>
+        <span className="text-[11px] text-slate-400">Only real saved scan history is shared.</span>
+      </div>
+
       {/* Preset Suggestions */}
       <div className="bg-slate-50 dark:bg-slate-950/60 px-4 py-2.5 border-b border-slate-200/60 dark:border-slate-800 overflow-x-auto flex items-center gap-2 scrollbar-none">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 shrink-0">
-          <Sparkles className="w-3 h-3 text-amber-500" /> Popular Queries:
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 shrink-0">
+          <Sparkles className="w-3 h-3 text-amber-500" /> Try asking:
         </span>
         {presetQueries.map((preset, idx) => (
           <button

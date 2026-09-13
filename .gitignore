@@ -4,5 +4,24 @@ venv/
 __pycache__/
 *.pyc
 database/*.db
+static/uploads/*
+!static/uploads/.gitkeep
 node_modules/
+dist/
 .DS_Store
+# Local Python environment
+nithin/
+__pycache__/
+*.pyc
+
+# Node dependencies
+node_modules/
+
+# Local uploads
+uploads/
+
+# Local environment secrets
+.env
+
+# Local project archives
+*.zip

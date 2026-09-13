@@ -1,6 +1,10 @@
 // Farmer AI - Centralized REST API Service Layer
 
-const API_BASE = ''; // Uses Vite proxy ('/api') or relative path
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+function apiUrl(endpoint) {
+  return `${API_BASE_URL}${endpoint}`;
+}
 
 async function request(endpoint, options = {}) {
   const defaultHeaders = {
@@ -8,21 +12,11 @@ async function request(endpoint, options = {}) {
     ...(options.headers || {})
   };
 
-  let response;
-  try {
-    response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers: defaultHeaders,
-      credentials: 'same-origin'
-    });
-  } catch (err) {
-    // Fallback if accessed on another port
-    response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
-      ...options,
-      headers: defaultHeaders,
-      credentials: 'include'
-    });
-  }
+  const response = await fetch(apiUrl(endpoint), {
+    ...options,
+    headers: defaultHeaders,
+    credentials: API_BASE_URL ? 'include' : 'same-origin'
+  });
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -70,6 +64,10 @@ export async function getDashboardSummary() {
   return request('/api/dashboard/summary', { method: 'GET' });
 }
 
+export async function getWeather(latitude, longitude) {
+  return request(`/api/weather?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`, { method: 'GET' });
+}
+
 // 3. Smart Crop Recommendation API (crop_model.pkl)
 export async function recommendCrop(cropParams) {
   return request('/api/recommend-crop', {
@@ -111,6 +109,14 @@ export async function getPlantDetails(plantId) {
   return request(`/api/plants/${plantId}`, { method: 'GET' });
 }
 
+export async function getPlantScans(plantId) {
+  return request(`/api/plants/${plantId}/scans`, { method: 'GET' });
+}
+
+export async function getScan(scanId) {
+  return request(`/api/scans/${scanId}`, { method: 'GET' });
+}
+
 export async function createPlant(plantData) {
   return request('/api/plants', {
     method: 'POST',
@@ -120,6 +126,12 @@ export async function createPlant(plantData) {
 
 export async function deletePlant(plantId) {
   return request(`/api/plants/${plantId}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function deleteScan(scanId) {
+  return request(`/api/scans/${scanId}`, {
     method: 'DELETE'
   });
 }

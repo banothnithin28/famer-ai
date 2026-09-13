@@ -11,17 +11,21 @@ import {
   Activity,
   ArrowRight,
   Info,
-  Loader2
+  Loader2,
+  Bot
 } from 'lucide-react';
 import { detectDiseaseFromAPI } from '../services/geminiService';
 import { getPlants } from '../services/apiService';
 
-export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
+export default function DiseaseScanner({ plantId, onAskAI, onOpenPlantDetails }) {
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/gif'];
   // Step state: 1 = Scan Your Plant, 2 = Preview, 3 = Loading, 4 = Result
   const [step, setStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [scanError, setScanError] = useState('');
   const [plants, setPlants] = useState([]);
   const [selectedPlantId, setSelectedPlantId] = useState(plantId || '');
 
@@ -40,6 +44,18 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setScanError('Please upload a JPEG, PNG, WEBP, BMP, or GIF image.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setScanError('Image must be 10 MB or smaller.');
+      e.target.value = '';
+      return;
+    }
+
+    setScanError('');
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setStep(2);
@@ -52,11 +68,17 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
     setSelectedFile(null);
     setPreviewUrl(null);
     setAnalysisResult(null);
+    setScanError('');
     setStep(1);
   };
 
   const handleAnalyze = async () => {
     if (!selectedFile) return;
+    if (!selectedPlantId) {
+      setScanError('Please select a plant so this scan can be saved to its history.');
+      setStep(1);
+      return;
+    }
     setStep(3); // Show loading state
 
     try {
@@ -64,15 +86,9 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
       setAnalysisResult(result);
       setStep(4);
     } catch (err) {
-      setAnalysisResult({
-        reliable: false,
-        low_confidence: true,
-        warning: '⚠️ Low confidence',
-        message: 'Please upload a clearer image.',
-        error: err.message,
-        confidence: 0
-      });
-      setStep(4);
+      setScanError(err.message || 'Unable to analyze this image. Please try again.');
+      setAnalysisResult(null);
+      setStep(1);
     }
   };
 
@@ -81,6 +97,7 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
     setSelectedFile(null);
     setPreviewUrl(null);
     setAnalysisResult(null);
+    setScanError('');
     setStep(1);
   };
 
@@ -95,7 +112,7 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
       if (items.length > 0) return items;
       return [res.symptoms.trim()];
     }
-    return ['Dark spots on leaf surface', 'Yellowing leaves and chlorotic tissue'];
+    return ['No symptom details were returned by the model.'];
   };
 
   const getActionsList = (res) => {
@@ -111,11 +128,7 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
       if (parts.length > 1) return parts;
       return [res.recommended_action.trim()];
     }
-    return [
-      'Remove infected leaves immediately',
-      'Improve air circulation between plants',
-      'Monitor the plant and avoid overhead watering'
-    ];
+    return ['No treatment guidance was returned by the model.'];
   };
 
   const getPreventionList = (res) => {
@@ -123,19 +136,14 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
     if (Array.isArray(res.prevention) && res.prevention.length > 0) {
       return res.prevention;
     }
-    return [
-      'Use certified disease-resistant seeds and clean soil',
-      'Ensure adequate spacing for sunlight and natural airflow',
-      'Avoid sprinkler watering that leaves foliage damp overnight',
-      'Practice annual crop rotation with non-host crops'
-    ];
+    return ['No prevention guidance was returned by the model.'];
   };
 
   const isLowConfidence = 
     analysisResult && 
     (analysisResult.reliable === false || 
      analysisResult.low_confidence === true || 
-     (analysisResult.confidence !== undefined && analysisResult.confidence < 60));
+    (analysisResult.confidence !== undefined && analysisResult.confidence < 60));
 
   return (
     <div className="max-w-xl mx-auto px-4 py-6 sm:py-8 space-y-6">
@@ -182,15 +190,21 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
               <Leaf className="w-3.5 h-3.5 text-emerald-600" />
-              Easy Plant Diagnosis
+              Plant health check
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-              Scan Your Plant
+              Take a photo of your plant leaf
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
-              Take or upload a photo of your infected leaf to find out what problem it has and how to treat it.
+              Use one clear leaf photo. Farmer AI will check it and show a possible problem with simple guidance.
             </p>
           </div>
+
+          {scanError && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300" role="alert">
+              {scanError}
+            </div>
+          )}
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2">
             <label htmlFor="plant-select" className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -235,9 +249,11 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Quick Farmer Tip
               </p>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Hold your camera close to the affected leaf in good daylight for best results.
-              </p>
+              <ul className="mx-auto max-w-xs space-y-1 text-left text-xs text-slate-600 dark:text-slate-300">
+                <li>Use a clear, well-lit photo</li>
+                <li>Keep one affected leaf in the frame</li>
+                <li>Avoid dark or blurry images</li>
+              </ul>
             </div>
 
             {/* Buttons: Take Photo & Upload Photo */}
@@ -255,7 +271,7 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
                 className="w-full min-h-[54px] bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 active:scale-[0.98] border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold text-base rounded-2xl flex items-center justify-center gap-3 transition-all cursor-pointer"
               >
                 <Upload className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                <span>Upload Photo</span>
+                  <span>Choose from Gallery</span>
               </button>
             </div>
           </div>
@@ -277,6 +293,39 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
             </p>
           </div>
 
+          {scanError && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300" role="alert">
+              {scanError}
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <label htmlFor="preview-plant-select" className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Save scan to plant
+            </label>
+            <select
+              id="preview-plant-select"
+              value={selectedPlantId}
+              onChange={(event) => {
+                setSelectedPlantId(event.target.value);
+                setScanError('');
+              }}
+              className="mt-2 w-full min-h-[48px] rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Choose a plant to continue</option>
+              {plants.map((plant) => (
+                <option key={plant.id} value={plant.id}>
+                  {plant.crop_name} - {plant.field_name}
+                </option>
+              ))}
+            </select>
+            {!plants.length && (
+              <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                Register a plant on the dashboard before saving a scan.
+              </p>
+            )}
+          </div>
+
           {/* Photo Preview Container */}
           <div className="bg-slate-900 rounded-3xl overflow-hidden border-2 border-emerald-500/40 p-2 shadow-2xl flex items-center justify-center">
             <img 
@@ -290,7 +339,8 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
           <div className="space-y-3 pt-1">
             <button
               onClick={handleAnalyze}
-              className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.98] text-white font-extrabold text-lg rounded-2xl shadow-lg shadow-emerald-950/25 flex items-center justify-center gap-3 transition-all cursor-pointer"
+              disabled={!selectedPlantId}
+              className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] text-white font-extrabold text-lg rounded-2xl shadow-lg shadow-emerald-950/25 flex items-center justify-center gap-3 transition-all cursor-pointer"
             >
               <Sparkles className="w-5 h-5 text-amber-300" />
               <span>Analyze Plant</span>
@@ -403,7 +453,7 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
                       Plant:
                     </span>
                     <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                      {analysisResult.crop || 'Tomato'}
+                      {analysisResult.crop || 'Unknown crop'}
                     </span>
                   </div>
 
@@ -426,23 +476,23 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
                       Detected Problem:
                     </span>
                     <span className="text-lg sm:text-xl font-black text-emerald-900 dark:text-emerald-200 leading-tight block mt-0.5">
-                      {analysisResult.detected || analysisResult.disease || 'Early Blight'}
+                      {analysisResult.detected || analysisResult.disease || 'No diagnosis returned'}
                     </span>
                   </div>
 
                   {/* Severity: */}
                   <div className="sm:text-right">
                     <span className="text-[11px] font-extrabold uppercase text-slate-400 dark:text-slate-400 tracking-wider block">
-                      Severity:
+                      Severity level:
                     </span>
                     <span className={`inline-flex items-center text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mt-1 ${
-                      analysisResult.risk === 'Critical' || analysisResult.severity?.includes('Critical')
+                      analysisResult.severity_level === 'High' || analysisResult.risk === 'Critical' || analysisResult.severity?.includes('Critical')
                         ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300'
-                        : analysisResult.risk === 'High' || analysisResult.severity?.includes('Severe')
+                        : analysisResult.severity_level === 'Medium' || analysisResult.risk === 'High' || analysisResult.severity?.includes('Severe')
                         ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300'
                         : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300'
                     }`}>
-                      {analysisResult.severity || analysisResult.risk || 'Moderate'}
+                      {analysisResult.severity_level || 'Medium'}
                     </span>
                   </div>
                 </div>
@@ -450,14 +500,30 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
 
               {/* Thumbnail preview if available */}
               {previewUrl && (
-                <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <img src={previewUrl} alt="Scanned Leaf" className="w-14 h-14 rounded-xl object-cover" />
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
-                    <p className="font-bold text-slate-700 dark:text-slate-300">Scanned Leaf Image</p>
-                    <p>Diagnosis generated directly by trained vision model</p>
+                <div className="space-y-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">Uploaded leaf image</h4>
+                  <div className="rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-700 p-2">
+                    <img src={previewUrl} alt="Uploaded leaf used for diagnosis" className="w-full max-h-72 object-contain rounded-xl" />
                   </div>
                 </div>
               )}
+
+              <div className="rounded-2xl border border-sky-200 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/30 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-black text-sky-900 dark:text-sky-200">
+                  <Info className="w-4 h-4" />
+                  ML prediction
+                </div>
+                <p className="text-sm text-sky-900/80 dark:text-sky-100/80">
+                  Disease name and confidence were returned by <span className="font-bold">{analysisResult.prediction_source || 'the trained disease model'}</span>.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">What this means</h4>
+                <p className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 p-4 text-sm leading-relaxed text-slate-800 dark:text-slate-200">
+                  {analysisResult.explanation || 'The structured disease information dataset does not contain an explanation for this result.'}
+                </p>
+              </div>
 
               {/* Symptoms: */}
               <div className="space-y-2">
@@ -479,6 +545,9 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Recommended Action:
                 </h4>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Guidance source: {analysisResult.guidance_source || 'Structured disease information dataset'}
+                </p>
                 <ol className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-800/60 space-y-2.5 text-sm text-slate-900 dark:text-slate-100">
                   {getActionsList(analysisResult).map((act, idx) => (
                     <li key={idx} className="flex items-start gap-3">
@@ -506,15 +575,17 @@ export default function DiseaseScanner({ plantId, onOpenPlantDetails }) {
                 </ul>
               </div>
 
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200">
+                This is an AI-based prediction. For serious cases, consult a local agricultural expert.
+              </div>
+
               {/* Action Button: [Scan Again] */}
               <div className="pt-2">
-                <button
-                  onClick={handleScanAgain}
-                  className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.98] text-white font-extrabold text-base rounded-2xl shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  <span>Scan Again</span>
-                </button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button onClick={handleScanAgain} className="w-full min-h-[58px] bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-[0.98] text-white font-extrabold text-base rounded-2xl shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2.5 transition-all cursor-pointer"><RotateCcw className="w-5 h-5" /><span>Scan Another Plant</span></button>
+                  {selectedPlantId && onOpenPlantDetails && <button onClick={() => onOpenPlantDetails(Number(selectedPlantId))} className="w-full min-h-[58px] border-2 border-emerald-200 bg-emerald-50 text-emerald-800 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2.5 transition-all hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"><Leaf className="w-5 h-5" /><span>View Plant History</span></button>}
+                  {onAskAI && <button onClick={onAskAI} className="w-full min-h-[58px] border-2 border-emerald-200 bg-emerald-50 text-emerald-800 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2.5 transition-all hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"><Bot className="w-5 h-5" /><span>Ask Farmer AI</span></button>}
+                </div>
               </div>
             </div>
           )}

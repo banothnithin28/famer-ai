@@ -55,7 +55,7 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; border-bottom: 1px dashed #a5d6a7; padding-bottom: 1rem;">
                 <div>
                     <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Detected:</span>
-                    <h2 id="resDiseaseName" style="font-size: 1.5rem; color: var(--primary-dark); margin-top: 2px;">Tomato Early Blight</h2>
+                    <h2 id="resDiseaseName" style="font-size: 1.5rem; color: var(--primary-dark); margin-top: 2px;">Awaiting model result</h2>
                 </div>
                 <div>
                     <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Confidence:</span>
@@ -64,7 +64,7 @@
                 <div>
                     <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Risk:</span>
                     <div style="margin-top: 4px;">
-                        <span id="resRiskBadge" style="background: #ffebee; color: #c62828; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #ffcdd2;">High</span>
+                        <span id="resRiskBadge" style="background: #f1f8e9; color: #2e7d32; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #c8e6c9;">Awaiting result</span>
                     </div>
                 </div>
             </div>
@@ -72,7 +72,7 @@
             <div style="margin-top: 1rem;">
                 <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Recommended action:</span>
                 <p id="resRecommendedAction" style="font-size: 1.05rem; font-weight: 700; color: #1b5e20; margin-top: 4px; background: white; padding: 10px 14px; border-radius: 8px; border: 1px solid #c8e6c9;">
-                    Remove affected leaves and apply the recommended treatment.
+                    Model guidance will appear here after analysis.
                 </p>
             </div>
         </div>
@@ -80,7 +80,7 @@
         <div style="margin-bottom: 1.2rem;">
             <strong style="color: var(--primary-dark);">Symptoms & Severity:</strong>
             <p id="resSymptoms" style="margin-top: 4px; color: var(--text-primary); line-height: 1.5;">
-                Dark concentric rings on older leaves, yellowing foliage margin, premature defoliation.
+                Model symptoms will appear here after analysis.
             </p>
         </div>
 
@@ -135,8 +135,8 @@ document.getElementById('diseaseForm').addEventListener('submit', async (e) => {
             document.getElementById('resDiseaseName').textContent = result.detected || result.disease;
             document.getElementById('resDiseaseConfidence').textContent = result.confidence + '%';
             document.getElementById('resRiskBadge').textContent = result.risk || 'High';
-            document.getElementById('resRecommendedAction').textContent = result.recommended_action || 'Remove affected leaves and apply the recommended treatment.';
-            document.getElementById('resSymptoms').textContent = result.symptoms;
+            document.getElementById('resRecommendedAction').textContent = result.recommended_action || 'No treatment guidance was returned by the model.';
+            document.getElementById('resSymptoms').textContent = result.symptoms || 'No symptom details were returned by the model.';
 
             // Update Risk badge style
             const riskBadge = document.getElementById('resRiskBadge');

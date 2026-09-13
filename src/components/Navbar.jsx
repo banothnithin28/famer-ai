@@ -1,44 +1,31 @@
 import React, { useState } from 'react';
-import { 
-  Sprout, 
-  Bot, 
-  Scan, 
-  CloudSun, 
-  TrendingUp, 
-  FileText, 
-  Calculator, 
-  Key, 
-  Sun, 
-  Moon, 
-  Menu, 
-  X,
-  CheckCircle2,
-  User,
-  LogOut
-} from 'lucide-react';
+import { Sprout, Bot, Scan, Sun, Moon, Menu, X, User, LogOut, History, MoreHorizontal } from 'lucide-react';
 
 export default function Navbar({ 
   activeTab, 
   setActiveTab, 
   darkMode, 
   setDarkMode, 
-  onOpenApiKeyModal, 
-  apiKey,
+  onOpenHistory,
   user,
   onOpenAuthModal,
   onLogout
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Sprout },
-    { id: 'crop', label: 'Crop Advisor', icon: Sprout, badge: 'ML' },
-    { id: 'scanner', label: 'Crop Scanner', icon: Scan, badge: 'Vision' },
-    { id: 'chat', label: 'Farmer AI Chat', icon: Bot, badge: 'AI' },
-    { id: 'weather', label: 'Weather Guard', icon: CloudSun },
-    { id: 'market', label: 'Mandi Rates', icon: TrendingUp },
-    { id: 'schemes', label: 'Govt Schemes', icon: FileText },
-    { id: 'calculator', label: 'AgriCalc', icon: Calculator },
+  const primaryItems = [
+    { id: 'dashboard', label: 'Home', icon: Sprout },
+    { id: 'scanner', label: 'Scan', icon: Scan },
+    { id: 'chat', label: 'Ask AI', icon: Bot },
+    { id: 'plant-details', label: 'History', icon: History },
+  ];
+
+  const tools = [
+    { id: 'crop', label: 'Crop Advisor', icon: Sprout },
+    { id: 'weather', label: 'Weather Guard', icon: Sun },
+    { id: 'market', label: 'Mandi Rates', icon: MoreHorizontal },
+    { id: 'schemes', label: 'Govt Schemes', icon: MoreHorizontal },
+    { id: 'calculator', label: 'Fertilizer Calculator', icon: MoreHorizontal },
   ];
 
   return (
@@ -71,13 +58,13 @@ export default function Navbar({
 
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => {
+            {primaryItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => item.id === 'plant-details' && onOpenHistory ? onOpenHistory() : setActiveTab(item.id)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all relative ${
                     isActive
                       ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-xs border border-emerald-200/60 dark:border-emerald-800'
@@ -86,14 +73,17 @@ export default function Navbar({
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
+            <details className="relative ml-1">
+              <summary className="list-none flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                <MoreHorizontal className="h-4 w-4" /> Tools
+              </summary>
+              <div className="absolute right-0 top-11 z-50 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+                {tools.map((item) => <button key={item.id} onClick={() => setActiveTab(item.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-200 dark:hover:bg-emerald-950/50"> <item.icon className="h-4 w-4 text-emerald-600" /> {item.label}</button>)}
+              </div>
+            </details>
           </nav>
 
           {/* Right Action Buttons */}
@@ -124,29 +114,6 @@ export default function Navbar({
               </button>
             )}
 
-            {/* Gemini API Key indicator */}
-            <button
-              onClick={onOpenApiKeyModal}
-              title={apiKey ? "Gemini API Key Connected" : "Add Custom Gemini API Key"}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${
-                apiKey
-                  ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-400'
-              }`}
-            >
-              {apiKey ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="hidden md:inline">Gemini Live</span>
-                </>
-              ) : (
-                <>
-                  <Key className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="hidden md:inline">API Key</span>
-                </>
-              )}
-            </button>
-
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -170,14 +137,15 @@ export default function Navbar({
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-1 shadow-lg">
-          {navItems.map((item) => {
+          {primaryItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => {
-                  setActiveTab(item.id);
+                  if (item.id === 'plant-details' && onOpenHistory) onOpenHistory();
+                  else setActiveTab(item.id);
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
@@ -190,14 +158,13 @@ export default function Navbar({
                   <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </div>
-                {item.badge && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}
+          <div className="border-t border-slate-200 pt-2 dark:border-slate-800">
+            <p className="px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-400">More tools</p>
+            {tools.map((item) => <button key={item.id} onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-600 hover:bg-emerald-50 dark:text-slate-300 dark:hover:bg-emerald-950/50"><item.icon className="h-5 w-5 text-emerald-600" />{item.label}</button>)}
+          </div>
         </div>
       )}
     </header>

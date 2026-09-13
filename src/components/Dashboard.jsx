@@ -1,338 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Sprout, 
-  Bot, 
-  Scan, 
-  CloudSun, 
-  TrendingUp, 
-  FileText, 
-  Calculator, 
-  ArrowRight, 
-  Sparkles, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Droplets, 
-  Thermometer, 
-  Sun,
-  Award,
-  User
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Bot, CheckCircle2, ChevronRight, CloudSun, Leaf, Scan, Sprout } from 'lucide-react';
 import { createPlant, getDashboardSummary, getPlants } from '../services/apiService';
+import FarmScene from './FarmScene';
 
-export default function Dashboard({ setActiveTab, user, onOpenAuthModal, onOpenPlantDetails }) {
-  const [summaryData, setSummaryData] = useState(null);
+const quickTools = [
+  { id: 'scanner', label: 'Scan Plant', text: 'Upload a leaf photo and check for possible problems.', icon: Scan, tone: 'bg-emerald-700' },
+  { id: 'chat', label: 'Ask Farmer AI', text: 'Get simple answers about crops, leaves, and care.', icon: Bot, tone: 'bg-sky-700' },
+  { id: 'plant-details', label: 'My Plant History', text: 'Review scans for a registered plant.', icon: Sprout, tone: 'bg-amber-600' },
+  { id: 'weather', label: 'Farming Tips', text: 'Check weather and irrigation guidance.', icon: CloudSun, tone: 'bg-teal-700' },
+];
+
+export default function Dashboard({ setActiveTab, user, onOpenPlantDetails }) {
+  const [summary, setSummary] = useState(null);
   const [plants, setPlants] = useState([]);
-  const [plantForm, setPlantForm] = useState({ crop_name: '', field_name: '', location: '' });
-  const [plantFormError, setPlantFormError] = useState('');
+  const [form, setForm] = useState({ crop_name: '', field_name: '', location: '' });
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
-    getDashboardSummary().then((res) => {
-      if (res && res.success) setSummaryData(res);
-    }).catch(() => {});
-    getPlants().then((res) => {
-      if (res?.success) setPlants(res.plants || []);
+    Promise.all([getDashboardSummary(), getPlants()]).then(([summaryResponse, plantsResponse]) => {
+      if (summaryResponse?.success) setSummary(summaryResponse);
+      if (plantsResponse?.success) setPlants(plantsResponse.plants || []);
     }).catch(() => {});
   }, [user]);
 
-  const handleCreatePlant = async (event) => {
+  const registerPlant = async (event) => {
     event.preventDefault();
-    setPlantFormError('');
+    setFormError('');
     try {
-      const result = await createPlant(plantForm);
-      if (!result.success) throw new Error(result.error || 'Unable to register plant.');
-      setPlants((current) => [result.plant, ...current]);
-      setPlantForm({ crop_name: '', field_name: '', location: '' });
+      const response = await createPlant(form);
+      if (!response.success) throw new Error(response.error || 'Unable to register this plant.');
+      setPlants((current) => [response.plant, ...current]);
+      setForm({ crop_name: '', field_name: '', location: '' });
     } catch (error) {
-      setPlantFormError(error.message);
+      setFormError(error.message || 'Unable to register this plant.');
     }
   };
 
-  const quickStats = [
-    { 
-      label: "Diagnostic Confidence", 
-      value: summaryData?.stats?.diagnostic_accuracy || "98.4%", 
-      icon: ShieldCheck, 
-      color: "text-emerald-500" 
-    },
-    { 
-      label: "Crop Scans Completed", 
-      value: summaryData?.stats?.scans_completed !== undefined ? `${summaryData.stats.scans_completed}` : "3", 
-      icon: Scan, 
-      color: "text-blue-500" 
-    },
-    { 
-      label: "Real-time Mandi Markets", 
-      value: summaryData?.stats?.active_markets || "2,400+", 
-      icon: TrendingUp, 
-      color: "text-amber-500" 
-    },
-    { 
-      label: "Crops Evaluated", 
-      value: summaryData?.stats?.crops_recommended !== undefined ? `${summaryData.stats.crops_recommended}` : "18+", 
-      icon: Sprout, 
-      color: "text-purple-500" 
-    }
-  ];
-
-  const featureCards = [
-    {
-      id: 'crop',
-      title: 'Smart Crop Recommendation',
-      desc: 'Predict high-yielding crops tailored for your soil texture, season, and rainfall using crop_model.pkl.',
-      icon: Sprout,
-      color: 'from-emerald-600 to-green-700',
-      badge: 'ML Engine'
-    },
-    {
-      id: 'scanner',
-      title: 'Crop Disease Scanner',
-      desc: 'Upload leaf or plant photos for instant AI disease identification & treatment remedies.',
-      icon: Scan,
-      color: 'from-teal-500 to-emerald-600',
-      badge: 'Vision AI'
-    },
-    {
-      id: 'weather',
-      title: 'Weather & Irrigation Guard',
-      desc: 'Local weather forecasts paired with smart AI irrigation timing recommendations.',
-      icon: CloudSun,
-      color: 'from-sky-500 to-blue-600',
-      badge: 'Smart Water'
-    },
-    {
-      id: 'market',
-      title: 'Live Mandi Price Tracker',
-      desc: 'Track daily crop price trends, market highs/lows, and AI selling advisories.',
-      icon: TrendingUp,
-      color: 'from-amber-500 to-orange-600',
-      badge: 'Market Pulse'
-    },
-    {
-      id: 'schemes',
-      title: 'Govt Schemes & Subsidies',
-      desc: 'Find PM-KISAN, crop insurance, and solar pump subsidies with instant eligibility checks.',
-      icon: FileText,
-      color: 'from-indigo-500 to-purple-600',
-      badge: 'Financial Aid'
-    },
-    {
-      id: 'calculator',
-      title: 'Yield & Fertilizer Calc',
-      desc: 'Calculate exact Urea, DAP, and MOP requirements per acre to maximize crop yield.',
-      icon: Calculator,
-      color: 'from-lime-600 to-emerald-700',
-      badge: 'AgriCalc'
-    }
-  ];
+  const scanCount = summary?.stats?.scans_completed;
 
   return (
-    <div className="space-y-8 pb-12">
-      
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 text-white p-8 md:p-12 shadow-2xl">
-        {/* Decorative Background Accents */}
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/3 -mb-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
-
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold backdrop-blur-md">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>
-                {user ? `🌾 Welcome back, Farmer ${user.name} (${user.location})!` : "Next-Gen Smart Agriculture Engine"}
-              </span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-              Empowering Farmers with <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-green-200 to-amber-200">Artificial Intelligence</span>
-            </h1>
-
-            <p className="text-emerald-100/90 text-base md:text-lg max-w-2xl font-normal leading-relaxed">
-              Make smarter agricultural decisions with{' '}
-              <span className="font-semibold text-emerald-300 bg-emerald-800/50 px-2 py-0.5 rounded-md border border-emerald-500/30">AI crop recommendations</span>,{' '}
-              <span className="font-semibold text-teal-300 bg-teal-800/50 px-2 py-0.5 rounded-md border border-teal-500/30">instant leaf disease diagnosis</span>,{' '}
-              <span className="font-semibold text-sky-300 bg-sky-800/50 px-2 py-0.5 rounded-md border border-sky-500/30">live weather alerts</span>, and{' '}
-              <span className="font-semibold text-amber-300 bg-amber-800/50 px-2 py-0.5 rounded-md border border-amber-500/30">precision irrigation</span>.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                onClick={() => setActiveTab('crop')}
-                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm"
-              >
-                <Sprout className="w-4 h-4" />
-                <span>Crop Recommendation</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => setActiveTab('scanner')}
-                className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-emerald-500/30 text-emerald-200 font-semibold px-4 py-3 rounded-xl backdrop-blur-md hover:text-white transition-all text-sm"
-              >
-                <Scan className="w-4 h-4 text-teal-400" />
-                <span>Scan Disease</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('chat')}
-                className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-emerald-500/30 text-emerald-200 font-semibold px-4 py-3 rounded-xl backdrop-blur-md hover:text-white transition-all text-sm"
-              >
-                <Bot className="w-4 h-4 text-emerald-400" />
-                <span>Ask AI</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Quick AI Tip Card */}
-          <div className="lg:col-span-5">
-            <div className="bg-slate-800/70 border border-emerald-500/30 backdrop-blur-md rounded-2xl p-6 text-slate-100 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
-                    <Award className="w-5 h-5" />
-                  </div>
-                  <span className="font-bold text-sm tracking-wide text-amber-300">DAILY AGRONOMIST ADVISORY</span>
-                </div>
-                <span className="text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                  Updated Today
-                </span>
-              </div>
-
-              <div className="space-y-2 border-l-2 border-emerald-500 pl-4 py-1">
-                <h3 className="font-bold text-base text-white">Wheat & Cereal Crop Sowing Season</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  "Ensure seed treatment with *Trichoderma viride* @ 4g/kg seed prior to sowing to shield roots from collar rot and wilt pathogens."
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1"><Thermometer className="w-3.5 h-3.5 text-amber-400" /> 28°C</span>
-                  <span className="flex items-center gap-1"><Droplets className="w-3.5 h-3.5 text-sky-400" /> 68% Hum</span>
-                </div>
-                <button 
-                  onClick={() => setActiveTab('weather')} 
-                  className="text-emerald-300 hover:text-emerald-200 font-semibold underline underline-offset-2"
-                >
-                  View Irrigation Plan →
-                </button>
-              </div>
-            </div>
+    <div className="space-y-8 pb-16">
+      <section className="relative overflow-hidden rounded-[2rem] bg-[#173b2a] px-6 py-8 text-white shadow-xl sm:px-10 sm:py-12">
+        <FarmScene />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(11,43,28,.92)_0%,rgba(16,63,39,.72)_52%,rgba(16,63,39,.34)_100%)]" />
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border-[32px] border-emerald-400/10" />
+        <div className="relative max-w-3xl space-y-5">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-emerald-100"><Leaf className="h-4 w-4" /> Practical help for your next farm decision</p>
+          <h1 className="max-w-2xl text-3xl font-black leading-tight sm:text-5xl">Understand your plant's health before the problem gets worse.</h1>
+          <p className="max-w-xl text-base leading-relaxed text-emerald-50/80 sm:text-lg">Take a photo of a plant leaf and let Farmer AI help identify possible problems with simple next steps.</p>
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <button onClick={() => setActiveTab('scanner')} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-amber-400 px-6 text-base font-black text-[#173b2a] shadow-lg shadow-black/20 hover:bg-amber-300 focus:outline-none focus:ring-4 focus:ring-amber-200/60"><Scan className="h-5 w-5" /> Scan My Plant <ArrowRight className="h-5 w-5" /></button>
+            <button onClick={() => setActiveTab('chat')} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-6 text-base font-bold text-white hover:bg-white/15 focus:outline-none focus:ring-4 focus:ring-white/30"><Bot className="h-5 w-5" /> Ask Farmer AI</button>
           </div>
         </div>
-      </div>
-
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {quickStats.map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:border-emerald-500/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{stat.label}</span>
-                <Icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">{stat.value}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      <section className="space-y-4">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">My plants</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Open a plant to review its real scan history.</p>
-          </div>
-          <button onClick={() => setActiveTab('scanner')} className="text-sm font-black text-emerald-700 dark:text-emerald-400">Scan a plant</button>
-        </div>
-        {plants.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-5 dark:border-slate-700">
-            <p className="text-sm font-semibold text-slate-500">No plants registered yet. Register a plant before scanning to build its health history.</p>
-            <form onSubmit={handleCreatePlant} className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input required value={plantForm.crop_name} onChange={(event) => setPlantForm({ ...plantForm, crop_name: event.target.value })} placeholder="Crop name" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
-              <input required value={plantForm.field_name} onChange={(event) => setPlantForm({ ...plantForm, field_name: event.target.value })} placeholder="Field or plant name" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
-              <input value={plantForm.location} onChange={(event) => setPlantForm({ ...plantForm, location: event.target.value })} placeholder="Location (optional)" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
-              <button type="submit" className="sm:col-span-3 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-500">Register plant</button>
-            </form>
-            {plantFormError && <p className="mt-2 text-xs font-bold text-rose-600">{plantFormError}</p>}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {plants.map((plant) => (
-              <button
-                key={plant.id}
-                onClick={() => onOpenPlantDetails(plant.id)}
-                className="text-left rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-emerald-500/50 hover:shadow-lg transition-all dark:border-slate-800 dark:bg-slate-900"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-wider text-emerald-600">{plant.plant_code}</p>
-                    <h3 className="mt-1 text-lg font-black text-slate-900 dark:text-white">{plant.crop_name}</h3>
-                    <p className="text-sm text-slate-500">{plant.field_name}</p>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-black ${plant.status === 'Healthy' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{plant.status}</span>
-                </div>
-                <div className="mt-4 flex items-center justify-between text-xs font-bold text-slate-500">
-                  <span>{plant.latest_scan_date ? `Last scan: ${plant.latest_scan_date}` : 'No scans yet'}</span>
-                  <span className="text-emerald-700 dark:text-emerald-400">View details</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* Feature Modules Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Smart Agricultural Tools
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Select a module to start leveraging AI for your farm.
-            </p>
-          </div>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {quickTools.map(({ id, label, text, icon: Icon, tone }) => <button key={id} onClick={() => id === 'plant-details' && plants[0] ? onOpenPlantDetails(plants[0].id) : setActiveTab(id)} className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"><span className={`flex h-11 w-11 items-center justify-center rounded-xl text-white ${tone}`}><Icon className="h-5 w-5" /></span><span className="mt-4 block text-base font-black text-slate-900 dark:text-white">{label}<ChevronRight className="ml-1 inline h-4 w-4 text-emerald-600 transition group-hover:translate-x-1" /></span><span className="mt-1 block text-sm leading-relaxed text-slate-500 dark:text-slate-400">{text}</span></button>)}
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-widest text-emerald-600">Your farm space</p><h2 className="mt-2 text-2xl font-black text-slate-900 dark:text-white">My plants</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Register a plant to keep its real scan history in one place.</p></div><Sprout className="h-7 w-7 text-emerald-600" /></div>
+          {plants.length ? <div className="mt-6 space-y-3">{plants.slice(0, 3).map((plant) => <button key={plant.id} onClick={() => onOpenPlantDetails(plant.id)} className="flex min-h-16 w-full items-center justify-between rounded-xl border border-slate-200 px-4 text-left hover:border-emerald-400 dark:border-slate-700"><span><span className="block font-black text-slate-900 dark:text-white">{plant.crop_name}</span><span className="text-xs text-slate-500">{plant.field_name}</span></span><span className="text-right text-xs font-bold text-emerald-700 dark:text-emerald-400">{plant.latest_scan_date || 'No scan yet'}<ChevronRight className="ml-1 inline h-4 w-4" /></span></button>)}</div> : <form onSubmit={registerPlant} className="mt-6 space-y-3"><p className="rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">No plant scans yet. Add a plant, then start your first scan.</p><div className="grid gap-3 sm:grid-cols-2"><input required value={form.crop_name} onChange={(e) => setForm({ ...form, crop_name: e.target.value })} placeholder="Crop name" className="min-h-12 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-700 dark:bg-slate-800" /><input required value={form.field_name} onChange={(e) => setForm({ ...form, field_name: e.target.value })} placeholder="Field or plant name" className="min-h-12 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-700 dark:bg-slate-800" /></div><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location (optional)" className="min-h-12 w-full rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-700 dark:bg-slate-800" /><button className="min-h-12 w-full rounded-xl bg-emerald-700 px-4 text-sm font-black text-white hover:bg-emerald-600">Register plant</button>{formError && <p className="text-sm font-bold text-rose-600">{formError}</p>}</form>}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featureCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.id}
-                onClick={() => setActiveTab(card.id)}
-                className="group relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                      {card.badge}
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors mb-2">
-                    {card.title}
-                  </h3>
-
-                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
-                    {card.desc}
-                  </p>
-                </div>
-
-                <div className="flex items-center text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform">
-                  <span>Open Tool</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+        <div className="rounded-2xl border border-slate-200 bg-[#fffaf0] p-6 dark:border-slate-800 dark:bg-slate-900 sm:p-8"><p className="text-xs font-black uppercase tracking-widest text-amber-700">Your activity</p><h2 className="mt-2 text-2xl font-black text-slate-900 dark:text-white">A clear next step</h2><p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{scanCount ? `You have completed ${scanCount} plant scan${scanCount === 1 ? '' : 's'}. Open your history to review the real results.` : 'Start with one clear leaf photo. You can return here to review your scan history.'}</p><div className="mt-6 flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm dark:bg-slate-800"><CheckCircle2 className="h-6 w-6 text-emerald-600" /><span className="text-sm font-bold text-slate-700 dark:text-slate-200">One photo at a time. Simple guidance after every scan.</span></div><button onClick={() => setActiveTab('scanner')} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white hover:bg-emerald-600">Start a scan <ArrowRight className="h-4 w-4" /></button></div>
+      </section>
     </div>
   );
 }

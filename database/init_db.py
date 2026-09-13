@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def init_db():
-    db_path = os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'farmer.db'))
+def init_db(db_path=None):
+    db_path = db_path or os.getenv('DB_PATH', os.path.join(os.path.dirname(__file__), 'farmer.db'))
     schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
 
     os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
