@@ -1276,7 +1276,15 @@ def fallback_farmer_reply(message):
         return 'Check the latest rain forecast and your soil before watering. If rain is expected soon, extra irrigation may not be needed.'
     if 'disease' in message_lower or 'blight' in message_lower or 'fungus' in message_lower:
         return 'A scan can show a possible disease, but it is not a confirmed diagnosis. Remove badly affected leaves, monitor new growth, and consult a local agricultural expert if symptoms spread.'
-    return 'Farmer AI is temporarily unavailable. Please try again shortly, or ask a local agricultural expert for help with a serious crop problem.'
+    if any(term in message_lower for term in ('pest', 'insect', 'worm', 'caterpillar', 'aphid', 'whitefly', 'thrip', 'mite', 'borer')):
+        return 'For pest control, inspect the underside of leaves, remove heavily affected plant parts, and use neem-based treatment according to the product label. Avoid spraying during flowering when pollinators are active, and consult your local agricultural expert before using chemical pesticides.'
+    if any(term in message_lower for term in ('fertilizer', 'urea', 'dap', 'mop', 'npk', 'nutrient', 'manure', 'compost')):
+        return 'Use a soil test before choosing fertilizer. Apply well-decomposed organic manure during field preparation, and split nitrogen applications rather than applying all urea at once. Follow the crop-specific dose on the label or from your local KVK.'
+    if any(term in message_lower for term in ('suggest', 'recommend', 'which crop', 'what crop', 'grow', 'sow', 'cultivate')):
+        return 'Crop choice depends on your soil, season, water availability, and local market. A soil test and advice from your nearest KVK can identify the best crop and variety for your field.'
+    if any(term in message_lower for term in ('price', 'mandi', 'market', 'sell', 'profit', 'rate', 'income')):
+        return 'Compare current prices at nearby mandis and e-NAM before selling. Keep harvested produce clean and dry, and ask your local Farmer Producer Organization about collective selling options.'
+    return 'I can help with watering, crop diseases, pests, fertilizer, crop selection, and market planning. Please include your crop, location, symptoms, and recent weather for more specific advice.'
 
 
 def build_farmer_context(user, plant_id, latitude, longitude):

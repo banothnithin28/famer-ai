@@ -9,6 +9,7 @@ import MarketPrices from './components/MarketPrices';
 import SchemesFinder from './components/SchemesFinder';
 import FertilizerCalc from './components/FertilizerCalc';
 import PlantDetails from './components/PlantDetails';
+import RegisterPlant from './components/RegisterPlant';
 import AuthModal from './components/AuthModal';
 import { getCurrentUser, logoutFarmer } from './services/apiService';
 import { Sprout, Heart } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-200">
       
       {/* Navigation Header */}
       <Navbar
@@ -60,11 +61,12 @@ export default function App() {
       />
 
       {/* Main Content Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 pb-4 pt-5 sm:px-6 lg:px-8 lg:pt-8">
         {activeTab === 'dashboard' && (
           <Dashboard 
             setActiveTab={setActiveTab} 
             user={user} 
+            onRegisterPlant={() => setActiveTab('register')}
             onOpenAuthModal={() => setAuthModalOpen(true)} 
             onOpenPlantDetails={(plantId) => {
               setSelectedPlantId(plantId);
@@ -72,6 +74,7 @@ export default function App() {
             }}
           />
         )}
+        {activeTab === 'register' && <RegisterPlant onBack={(nextTab = 'dashboard', plantId = null) => { if (plantId) setSelectedPlantId(plantId); setActiveTab(nextTab); }} onRegistered={() => {}} user={user} />}
         {activeTab === 'crop' && <CropAdvisor setActiveTab={setActiveTab} />}
         {activeTab === 'chat' && <AIChatbot plantId={chatPlantId} />}
         {activeTab === 'scanner' && <DiseaseScanner plantId={selectedPlantId} onAskAI={() => { setChatPlantId(selectedPlantId); setActiveTab('chat'); }} onOpenPlantDetails={(plantId) => { setSelectedPlantId(plantId); setActiveTab('plant-details'); }} />}
@@ -83,7 +86,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mt-12 py-8 transition-colors">
+      <footer className="border-t border-[var(--border-color)] bg-[var(--bg-card)] mt-12 py-8 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">

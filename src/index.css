@@ -2,10 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-primary: #f7f8f2;
+  --bg-secondary: #f1f5ed;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --text-primary: #243126;
+  --text-secondary: #617064;
+  --text-muted: #8a988d;
+  --border-color: #dde5dc;
+  --accent-primary: #2f6b3b;
+  --leaf: #78a95a;
+  --accent-warning: #f2b84b;
+  --accent-danger: #c95545;
+  --weather: #4f91a8;
+  --success: #3f8f55;
+  --success-bg: #e8f3e8;
+  --danger-bg: #fff0ee;
+}
+
+.dark {
+  --bg-primary: #101a14;
+  --bg-secondary: #16231b;
+  --bg-card: #1c2b21;
+  --bg-elevated: #223329;
+  --text-primary: #f1f6f0;
+  --text-secondary: #b8c7ba;
+  --text-muted: #8fa193;
+  --border-color: #34483a;
+  --accent-primary: #7ccb8a;
+  --leaf: #9bcb72;
+  --accent-warning: #f6c85f;
+  --accent-danger: #f47768;
+  --weather: #72b8d0;
+  --success: #72d58a;
+  --success-bg: #213e2b;
+  --danger-bg: #482620;
+}
+
 @layer base {
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
+}
+
+@layer components {
+  .farmer-home {
+    --farmer-border: var(--border-color);
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .farmer-card {
+    border: 1px solid var(--farmer-border);
+    border-radius: 20px;
+    background: var(--bg-card);
+    box-shadow: 0 8px 24px rgba(47, 107, 59, 0.06);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .farmer-kicker {
+    color: var(--accent-primary);
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  @keyframes dashboard-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-dashboard-in { animation: dashboard-in 500ms ease-out both; }
+
+  .form-label { display: block; margin-bottom: 0.4rem; color: var(--text-secondary); font-size: 0.78rem; font-weight: 800; }
+  .form-label em { color: var(--text-muted); font-style: normal; font-weight: 600; }
+  .form-input { min-height: 3rem; width: 100%; border: 1px solid var(--border-color); border-radius: 0.75rem; background: var(--bg-secondary); padding: 0.75rem 1rem; color: var(--text-primary); outline: none; }
+  .form-input:focus { border-color: var(--leaf); box-shadow: 0 0 0 3px color-mix(in srgb, var(--leaf) 20%, transparent); }
+
+  .dark .bg-white { background-color: var(--bg-card) !important; }
+  .dark .bg-slate-50, .dark .bg-slate-100 { background-color: var(--bg-secondary) !important; }
+  .dark .bg-slate-900 { background-color: var(--bg-card) !important; }
+  .dark .bg-slate-950 { background-color: var(--bg-primary) !important; }
+  .dark body { background-color: var(--bg-primary); }
+  .dark .text-slate-900, .dark .text-slate-800 { color: var(--text-primary) !important; }
+  .dark .text-slate-700, .dark .text-slate-600 { color: var(--text-secondary) !important; }
+  .dark .text-slate-500, .dark .text-slate-400 { color: var(--text-muted) !important; }
+  .dark .border-slate-200, .dark .border-slate-100 { border-color: var(--border-color) !important; }
+  .dark .border-slate-800, .dark .border-slate-700 { border-color: var(--border-color) !important; }
+  .dark .farmer-home .text-\[\#243126\] { color: var(--text-primary) !important; }
+  .dark .farmer-home .text-slate-500, .dark .farmer-home .text-slate-600 { color: var(--text-secondary) !important; }
+  .dark .farmer-home .bg-white { background-color: var(--bg-elevated) !important; }
+  .dark .farmer-home [class*="bg-[#FCFDF9]"] { background-color: var(--bg-secondary) !important; }
+  .dark .farmer-home [class*="bg-[#F4F8F0]"] { background-color: var(--bg-secondary) !important; }
+  .dark .farmer-home [class*="bg-[#FFF8E8]"] { background-color: var(--bg-elevated) !important; }
+  .dark .farmer-home [class*="bg-[#EAF4F6]"] { background-color: var(--bg-elevated) !important; }
+  .dark .farmer-home [class*="bg-[#E8F3E8]"] { background-color: var(--success-bg) !important; }
+  .dark .farmer-home [class*="bg-[#FFF0D9]"] { background-color: #4b3820 !important; }
+  .dark .farmer-home [class*="border-[#E3EAE0]"], .dark .farmer-home [class*="border-[#DDE9D8]"] { border-color: var(--border-color) !important; }
 }
 
 /* Custom scrollbars */
@@ -34,4 +135,101 @@
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.smart-farm-canvas,
+.smart-farm-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.34;
+}
+
+.smart-farm-fallback {
+  overflow: hidden;
+  background: linear-gradient(180deg, #b8d9d8 0%, #e9f0dc 50%, #789b5b 51%, #527344 100%);
+}
+
+.dark .smart-farm-fallback {
+  opacity: 0.38;
+  background: linear-gradient(180deg, #14251e 0%, #1d3426 52%, #203d28 53%, #15281c 100%);
+}
+
+.smart-farm-sun {
+  position: absolute;
+  top: 12%;
+  right: 14%;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  background: rgba(247, 210, 111, 0.34);
+  box-shadow: 0 0 60px rgba(247, 210, 111, 0.28);
+}
+
+.dark .smart-farm-sun {
+  background: rgba(230, 198, 107, 0.18);
+  box-shadow: 0 0 50px rgba(230, 198, 107, 0.16);
+}
+
+.smart-farm-hill {
+  position: absolute;
+  left: -5%;
+  width: 110%;
+  border-radius: 50% 50% 0 0;
+}
+
+.smart-farm-hill-back {
+  bottom: 28%;
+  height: 35%;
+  background: rgba(92, 139, 91, 0.5);
+  transform: rotate(-3deg);
+}
+
+.smart-farm-hill-front {
+  bottom: 8%;
+  height: 35%;
+  background: rgba(63, 119, 67, 0.65);
+  transform: rotate(4deg);
+}
+
+.smart-farm-field {
+  position: absolute;
+  right: -10%;
+  bottom: -10%;
+  left: -10%;
+  height: 34%;
+  transform: rotate(-3deg);
+  background: repeating-linear-gradient(90deg, rgba(38, 86, 42, 0.38) 0 3px, transparent 3px 42px);
+}
+
+.smart-farm-row {
+  position: absolute;
+  bottom: 5%;
+  width: 45%;
+  height: 12%;
+  border-top: 2px solid rgba(203, 231, 157, 0.28);
+  border-radius: 50%;
+  transform: rotate(-12deg);
+}
+
+.smart-farm-row-one { left: 8%; }
+.smart-farm-row-two { right: 6%; bottom: 13%; transform: rotate(12deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .smart-farm-canvas { display: none; }
+}
+
+html,
+body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary);
+}
+
+html.dark,
+html.dark body {
+  background-color: #101a14 !important;
+  color: #f1f6f0;
 }

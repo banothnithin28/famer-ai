@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sprout, Bot, Scan, Sun, Moon, Menu, X, User, LogOut, History, MoreHorizontal } from 'lucide-react';
+import { Sprout, Bot, Scan, Sun, Moon, Menu, X, User, LogOut, History, MoreHorizontal, Lightbulb, Plus } from 'lucide-react';
 
 export default function Navbar({ 
   activeTab, 
@@ -15,9 +15,10 @@ export default function Navbar({
 
   const primaryItems = [
     { id: 'dashboard', label: 'Home', icon: Sprout },
-    { id: 'scanner', label: 'Scan', icon: Scan },
+    { id: 'register', label: 'Register Plant', icon: Plus },
+    { id: 'scanner', label: 'Check Plant', icon: Scan },
     { id: 'chat', label: 'Ask AI', icon: Bot },
-    { id: 'plant-details', label: 'History', icon: History },
+    { id: 'plant-details', label: 'My Crops', icon: History },
   ];
 
   const tools = [
@@ -29,7 +30,7 @@ export default function Navbar({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-emerald-100 dark:border-slate-800 shadow-sm transition-colors">
+    <header className="sticky top-0 z-40 border-b border-[#E3EAE0] bg-[#F7F8F2]/95 shadow-sm backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-900/95">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -133,6 +134,14 @@ export default function Navbar({
           </div>
         </div>
       </div>
+
+      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-[#DDE9D8] bg-white/95 p-2 shadow-2xl backdrop-blur-md lg:hidden" aria-label="Farmer navigation">
+        <button onClick={() => setActiveTab('dashboard')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'dashboard' ? 'bg-[#E8F3E8] text-[#2F6B3B]' : 'text-slate-500'}`}><Sprout className="h-5 w-5" />Home</button>
+        <button onClick={() => onOpenHistory ? onOpenHistory() : setActiveTab('dashboard')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'plant-details' ? 'bg-[#E8F3E8] text-[#2F6B3B]' : 'text-slate-500'}`}><History className="h-5 w-5" />My Crops</button>
+        <button onClick={() => setActiveTab('register')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'register' ? 'bg-[#E8F3E8] text-[#2F6B3B]' : 'text-slate-500'}`}><Plus className="h-5 w-5" />Register</button>
+        <button onClick={() => setActiveTab('scanner')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'scanner' ? 'bg-[#FFF0D9] text-[#8C5A22]' : 'text-slate-500'}`}><Scan className="h-5 w-5" />Check Plant</button>
+        <button onClick={() => setMobileMenuOpen((open) => !open)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black text-slate-500"><Menu className="h-5 w-5" />More</button>
+      </nav>
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
