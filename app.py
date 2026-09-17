@@ -6,6 +6,7 @@ import secrets
 import sqlite3
 import threading
 import time
+import warnings
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import webbrowser
@@ -162,7 +163,7 @@ def fetch_live_weather(latitude, longitude):
     return data
 
 # Configure Gemini (new google-genai SDK)
-_GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+_GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
 _GEMINI_MODEL   = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
 _FARMING_SYSTEM_PROMPT = """You are Farmer AI Assistant, a calm and practical agricultural helper for farmers.
 
@@ -233,15 +234,17 @@ disease_model_data = None
 
 def load_ml_models():
     global crop_model_data, disease_model_data
-    if os.path.exists(CROP_MODEL_PATH):
-        with open(CROP_MODEL_PATH, 'rb') as f:
-            crop_model_data = pickle.load(f)
-            print("[OK] Crop ML model loaded successfully.")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        if os.path.exists(CROP_MODEL_PATH):
+            with open(CROP_MODEL_PATH, 'rb') as f:
+                crop_model_data = pickle.load(f)
+                print("[OK] Crop ML model loaded successfully.")
 
-    if os.path.exists(DISEASE_MODEL_PATH):
-        with open(DISEASE_MODEL_PATH, 'rb') as f:
-            disease_model_data = pickle.load(f)
-            print("[OK] Disease ML model loaded successfully.")
+        if os.path.exists(DISEASE_MODEL_PATH):
+            with open(DISEASE_MODEL_PATH, 'rb') as f:
+                disease_model_data = pickle.load(f)
+                print("[OK] Disease ML model loaded successfully.")
 
 # Load models on server boot
 load_ml_models()
