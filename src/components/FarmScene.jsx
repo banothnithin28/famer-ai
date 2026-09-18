@@ -13,7 +13,7 @@ function StaticFarmBackdrop() {
   );
 }
 
-export default function FarmScene() {
+export default function FarmScene({ className = '', style = {} }) {
   const canvasRef = useRef(null);
   const [fallback, setFallback] = useState(false);
 
@@ -183,5 +183,16 @@ export default function FarmScene() {
     };
   }, []);
 
-  return fallback ? <StaticFarmBackdrop /> : <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
+  return fallback ? (
+    <div className={`absolute inset-0 ${className}`} style={style}>
+      <StaticFarmBackdrop />
+    </div>
+  ) : (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className={`absolute inset-0 h-full w-full pointer-events-none ${className}`}
+      style={style}
+    />
+  );
 }

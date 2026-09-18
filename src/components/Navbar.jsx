@@ -1,181 +1,382 @@
-import React, { useState } from 'react';
-import { Sprout, Bot, Scan, Sun, Moon, Menu, X, User, LogOut, History, MoreHorizontal, Lightbulb, Plus } from 'lucide-react';
+import React from 'react';
+import {
+  Leaf,
+  Home,
+  Sprout,
+  Camera,
+  Bot,
+  CloudSun,
+  Sun,
+  Moon,
+  User,
+  LogOut,
+} from 'lucide-react';
 
-export default function Navbar({ 
-  activeTab, 
-  setActiveTab, 
-  darkMode, 
-  setDarkMode, 
-  onOpenHistory,
+const navItems = [
+  { id: 'dashboard', label: 'Home', icon: Home },
+  { id: 'plants',    label: 'My Plants', icon: Sprout },
+  { id: 'scanner',   label: 'Scan Plant', icon: Camera, isPrimary: true },
+  { id: 'weather',   label: 'Weather', icon: CloudSun },
+  { id: 'chat',      label: 'Farmer AI', icon: Bot },
+];
+
+export default function Navbar({
+  activeTab,
+  setActiveTab,
+  darkMode,
+  setDarkMode,
   user,
   onOpenAuthModal,
-  onLogout
+  onLogout,
 }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navTo = (tab) => {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  const primaryItems = [
-    { id: 'dashboard', label: 'Home', icon: Sprout },
-    { id: 'register', label: 'Register Plant', icon: Plus },
-    { id: 'scanner', label: 'Check Plant', icon: Scan },
-    { id: 'chat', label: 'Ask AI', icon: Bot },
-    { id: 'plant-details', label: 'My Crops', icon: History },
-  ];
-
-  const tools = [
-    { id: 'crop', label: 'Crop Advisor', icon: Sprout },
-    { id: 'weather', label: 'Weather Guard', icon: Sun },
-    { id: 'market', label: 'Mandi Rates', icon: MoreHorizontal },
-    { id: 'schemes', label: 'Govt Schemes', icon: MoreHorizontal },
-    { id: 'calculator', label: 'Fertilizer Calculator', icon: MoreHorizontal },
-  ];
+  const greeting = user?.name ? user.name.split(' ')[0] : null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#E3EAE0] bg-[#F7F8F2]/95 shadow-sm backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-900/95">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          
-          {/* Brand Logo */}
-          <div 
-            onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <Sprout className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">
-                  Farmer<span className="text-emerald-600 dark:text-emerald-400">AI</span>
-                </span>
-                <span className="bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-200 dark:border-emerald-800">
-                  Pro 2.0
-                </span>
-              </div>
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 -mt-1 hidden sm:block">
-                Smart Agriculture Assistant
-              </p>
-            </div>
-          </div>
+    <>
+      {/* ─── Desktop Top Navigation ─── */}
+      <header
+        className="top-nav hidden lg:flex items-center"
+        style={{
+          paddingLeft: '1.5rem',
+          paddingRight: '1.5rem',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          boxShadow: 'var(--shadow-sm)'
+        }}
+      >
+        <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {primaryItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
+          {/* Brand */}
+          <button
+            onClick={() => navTo('dashboard')}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            aria-label="Go to Farmer AI Home"
+          >
+            <span style={{
+              width: 38, height: 38, borderRadius: 10,
+              background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent)'
+            }}>
+              <Leaf size={22} color="#fff" />
+            </span>
+            <div style={{ textAlign: 'left' }}>
+              <span style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--text-primary)', letterSpacing: '-0.02em', display: 'block', lineHeight: 1.1 }}>
+                Farmer<span style={{ color: 'var(--primary)' }}>AI</span>
+              </span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Smart Crop Platform
+              </span>
+            </div>
+          </button>
+
+          {/* Core 5 Navigation Tabs */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} aria-label="Main Navigation">
+            {navItems.map(({ id, label, icon: Icon, isPrimary }) => {
+              const isActive = activeTab === id || (id === 'plants' && activeTab === 'plant-details');
+
+              if (isPrimary) {
+                return (
+                  <button
+                    key={id}
+                    onClick={() => navTo(id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.45rem',
+                      padding: '0.45rem 1.1rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                      fontSize: '0.875rem', fontWeight: 800,
+                      background: 'var(--primary)',
+                      color: '#FFFFFF',
+                      boxShadow: isActive
+                        ? '0 0 0 2px var(--surface), 0 0 0 4px var(--primary)'
+                        : '0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent)',
+                      transform: isActive ? 'scale(1.02)' : 'none',
+                      transition: 'all 180ms ease',
+                      marginLeft: '0.25rem',
+                      marginRight: '0.25rem',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary-hover)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--primary)'; }}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </button>
+                );
+              }
+
               return (
                 <button
-                  key={item.id}
-                  onClick={() => item.id === 'plant-details' && onOpenHistory ? onOpenHistory() : setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all relative ${
-                    isActive
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-xs border border-emerald-200/60 dark:border-emerald-800'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400'
-                  }`}
+                  key={id}
+                  onClick={() => navTo(id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.45rem',
+                    padding: '0.45rem 0.95rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontSize: '0.875rem', fontWeight: 700,
+                    background: isActive ? 'var(--success-bg)' : 'transparent',
+                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                    transition: 'all 180ms ease',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'var(--surface-secondary)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                    }
+                  }}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
+                  <Icon size={16} style={{ color: isActive ? 'var(--primary)' : 'var(--text-muted)' }} />
+                  {label}
                 </button>
               );
             })}
-            <details className="relative ml-1">
-              <summary className="list-none flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
-                <MoreHorizontal className="h-4 w-4" /> Tools
-              </summary>
-              <div className="absolute right-0 top-11 z-50 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-                {tools.map((item) => <button key={item.id} onClick={() => setActiveTab(item.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-200 dark:hover:bg-emerald-950/50"> <item.icon className="h-4 w-4 text-emerald-600" /> {item.label}</button>)}
-              </div>
-            </details>
           </nav>
 
-          {/* Right Action Buttons */}
-          <div className="flex items-center gap-2">
-            {/* Farmer Auth Button */}
+          {/* Secondary Controls: Profile / Settings / Theme */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             {user ? (
-              <div className="flex items-center gap-1.5">
-                <div className="hidden sm:flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold px-2.5 py-1.5 rounded-lg">
-                  <User className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{user.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.45rem',
+                  background: 'var(--surface-secondary)', border: '1px solid var(--border)',
+                  borderRadius: 8, padding: '0.35rem 0.75rem',
+                  fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)',
+                }}>
+                  <User size={13} style={{ color: 'var(--primary)' }} />
+                  {greeting || user.email}
                 </div>
                 <button
                   onClick={onLogout}
                   title="Sign Out"
-                  className="text-xs font-semibold px-2 py-1.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                    padding: '0.4rem 0.65rem', borderRadius: 8, border: '1px solid var(--border)',
+                    fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)',
+                    background: 'var(--surface)', cursor: 'pointer', transition: 'all 180ms',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Logout</span>
+                  <LogOut size={14} />
+                  Logout
                 </button>
               </div>
             ) : (
               <button
                 onClick={onOpenAuthModal}
-                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all"
+                className="btn btn-primary btn-sm"
+                id="nav-login-btn"
               >
-                <User className="w-3.5 h-3.5" />
-                <span>Farmer Login</span>
+                <User size={14} />
+                Login
               </button>
             )}
 
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Toggle Theme"
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{
+                width: 38, height: 38, borderRadius: 10, border: '1px solid var(--border)',
+                background: 'var(--surface-secondary)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', transition: 'all 180ms',
+                color: 'var(--text-primary)'
+              }}
+              id="dark-mode-toggle"
             >
-              {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
-            </button>
-
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {darkMode
+                ? <Sun size={17} style={{ color: 'var(--warning)' }} />
+                : <Moon size={17} style={{ color: 'var(--text-muted)' }} />}
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-[#DDE9D8] bg-white/95 p-2 shadow-2xl backdrop-blur-md lg:hidden" aria-label="Farmer navigation">
-        <button onClick={() => setActiveTab('dashboard')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'dashboard' ? 'bg-[#E8F3E8] text-[#2F6B3B]' : 'text-slate-500'}`}><Sprout className="h-5 w-5" />Home</button>
-        <button onClick={() => onOpenHistory ? onOpenHistory() : setActiveTab('dashboard')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'plant-details' ? 'bg-[#E8F3E8] text-[#2F6B3B]' : 'text-slate-500'}`}><History className="h-5 w-5" />My Crops</button>
-        <button onClick={() => setActiveTab('register')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'register' ? 'bg-[#E8F3E8] text-[#2F6B3B]' : 'text-slate-500'}`}><Plus className="h-5 w-5" />Register</button>
-        <button onClick={() => setActiveTab('scanner')} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black ${activeTab === 'scanner' ? 'bg-[#FFF0D9] text-[#8C5A22]' : 'text-slate-500'}`}><Scan className="h-5 w-5" />Check Plant</button>
-        <button onClick={() => setMobileMenuOpen((open) => !open)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black text-slate-500"><Menu className="h-5 w-5" />More</button>
-      </nav>
+      {/* ─── Mobile Top Header ─── */}
+      <header
+        className="mobile-top-header lg:hidden flex items-center justify-between"
+        style={{
+          padding: '0.75rem 1rem',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+        }}
+      >
+        <button
+          onClick={() => navTo('dashboard')}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <span style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Leaf size={18} color="#fff" />
+          </span>
+          <span style={{ fontWeight: 900, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+            Farmer<span style={{ color: 'var(--primary)' }}>AI</span>
+          </span>
+        </button>
 
-      {/* Mobile Drawer Navigation */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-1 shadow-lg">
-          {primaryItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {user ? (
+            <button
+              onClick={onLogout}
+              title="Sign Out"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.25rem',
+                padding: '0.3rem 0.6rem', borderRadius: 6, border: '1px solid var(--border)',
+                fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)',
+                background: 'var(--surface-secondary)', cursor: 'pointer',
+              }}
+            >
+              <LogOut size={13} />
+              Exit
+            </button>
+          ) : (
+            <button
+              onClick={onOpenAuthModal}
+              style={{
+                background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 6,
+                padding: '0.3rem 0.75rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Login
+            </button>
+          )}
+
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{
+              width: 34, height: 34, borderRadius: 8, border: '1px solid var(--border)',
+              background: 'var(--surface-secondary)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
+            {darkMode
+              ? <Sun size={15} style={{ color: 'var(--warning)' }} />
+              : <Moon size={15} style={{ color: 'var(--text-muted)' }} />}
+          </button>
+        </div>
+      </header>
+
+      {/* ─── Mobile Bottom Tab Bar (5 Core Features) ─── */}
+      <nav
+        className="bottom-nav lg:hidden"
+        aria-label="Mobile Navigation"
+        id="mobile-bottom-nav"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 'var(--bottom-nav-height)',
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          alignItems: 'center',
+          zIndex: 50,
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'
+        }}
+      >
+        {navItems.map(({ id, label, icon: Icon, isPrimary }) => {
+          const isActive = activeTab === id || (id === 'plants' && activeTab === 'plant-details');
+
+          if (isPrimary) {
             return (
               <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'plant-details' && onOpenHistory) onOpenHistory();
-                  else setActiveTab(item.id);
-                  setMobileMenuOpen(false);
+                key={id}
+                onClick={() => navTo(id)}
+                aria-label={label}
+                aria-current={isActive ? 'page' : undefined}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 0',
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                  isActive
-                    ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </div>
+                <span
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: 'var(--primary)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 10px color-mix(in srgb, var(--primary) 40%, transparent)',
+                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                    transition: 'all 180ms ease',
+                    marginTop: -10,
+                  }}
+                >
+                  <Icon size={22} />
+                </span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  color: 'var(--primary)',
+                  marginTop: 2,
+                }}>
+                  {label}
+                </span>
               </button>
             );
-          })}
-          <div className="border-t border-slate-200 pt-2 dark:border-slate-800">
-            <p className="px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-400">More tools</p>
-            {tools.map((item) => <button key={item.id} onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-600 hover:bg-emerald-50 dark:text-slate-300 dark:hover:bg-emerald-950/50"><item.icon className="h-5 w-5 text-emerald-600" />{item.label}</button>)}
-          </div>
-        </div>
-      )}
-    </header>
+          }
+
+          return (
+            <button
+              key={id}
+              onClick={() => navTo(id)}
+              aria-label={label}
+              aria-current={isActive ? 'page' : undefined}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 0',
+                color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                transition: 'all 180ms ease',
+              }}
+            >
+              <Icon size={20} style={{ marginBottom: 2 }} />
+              <span style={{
+                fontSize: '0.68rem',
+                fontWeight: isActive ? 800 : 600,
+                color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+              }}>
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+    </>
   );
 }

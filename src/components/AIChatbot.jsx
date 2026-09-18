@@ -1,114 +1,94 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Bot, 
-  Send, 
-  User, 
-  Sparkles, 
-  Mic, 
-  MicOff, 
-  Trash2, 
-  Copy, 
-  Check, 
-  Globe, 
+import {
+  Bot,
+  Send,
+  User,
+  Sparkles,
   RefreshCw,
-  Sprout,
-  HelpCircle
+  Copy,
+  Check,
 } from 'lucide-react';
 import { askFarmerAI } from '../services/geminiService';
 import { getPlants } from '../services/apiService';
+
+const QUICK_QUESTIONS = [
+  'What is wrong with my plant?',
+  'Should I water today?',
+  'Explain my latest scan',
+];
 
 export default function AIChatbot({ plantId = null }) {
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: 'ai',
-      text: "Namaste! 🌾 I am **Farmer AI**.\n\nAsk me about your crops, plants, leaves, watering, or farming problems.",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
+      text: 'Namaste! 🌾 I am **Farmer AI**.\n\nAsk questions about your crop, plant health or weather.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
   ]);
-
   const [inputQuery, setInputQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
-  const [selectedLang, setSelectedLang] = useState('English');
   const [plants, setPlants] = useState([]);
   const [selectedPlantId, setSelectedPlantId] = useState(plantId || '');
-  const [weatherLocation, setWeatherLocation] = useState(null);
+
   const chatEndRef = useRef(null);
-  const recognitionRef = useRef(null);
-
-  const presetQueries = [
-    'What is wrong with my plant?',
-    'Should I water my crop today?',
-    'Will rain affect my crop?',
-    'How can I prevent pests?',
-    'How do I care for this plant?',
-    'Explain my plant history'
-  ];
-
-  const languages = ['English', 'తెలుగు', 'हिन्दी', 'தமிழ்'];
+  const inputRef = useRef(null);
 
   useEffect(() => {
     setSelectedPlantId(plantId || '');
-    getPlants().then((result) => {
-      if (result?.success) setPlants(result.plants || []);
-    }).catch(() => {});
+    getPlants()
+      .then((r) => {
+        if (r?.success) setPlants(r.plants || []);
+      })
+      .catch(() => {});
   }, [plantId]);
-
-  useEffect(() => {
-    if (!navigator.geolocation) return undefined;
-    navigator.geolocation.getCurrentPosition(
-      (position) => setWeatherLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-      () => setWeatherLocation(null),
-      { enableHighAccuracy: false, maximumAge: 600000, timeout: 5000 }
-    );
-    return undefined;
-  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const handleSendMessage = async (textToSend) => {
-    const query = textToSend || inputQuery;
-    if (!query.trim() || loading) return;
+  const handleSend = async (textToSend) => {
+    const query = (textToSend || inputQuery).trim();
+    if (!query || loading) return;
 
     const userMsg = {
       id: Date.now(),
       sender: 'user',
       text: query,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
-
     setMessages((prev) => [...prev, userMsg]);
     if (!textToSend) setInputQuery('');
     setLoading(true);
 
     try {
-      const history = messages.slice(-8).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', text: m.text }));
-      const languageCode = selectedLang === 'हिन्दी' ? 'hi' : selectedLang === 'తెలుగు' ? 'te' : selectedLang === 'தமிழ்' ? 'ta' : 'en';
-      const response = await askFarmerAI(query, history, languageCode, selectedPlantId || null, weatherLocation);
-
-      const aiMsg = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: response,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
+      const history = messages
+        .slice(-8)
+        .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', text: m.text }));
+      const response = await askFarmerAI(query, history, 'en', selectedPlantId || null, null);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: 'ai',
-          text: "Farmer AI is temporarily unavailable. Please try again.",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
+          text: response,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: 'Farmer AI is temporarily unavailable. Please verify your connection or ask again.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
       ]);
     } finally {
       setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
@@ -118,237 +98,366 @@ export default function AIChatbot({ plantId = null }) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleClearChat = () => {
+  const handleClear = () => {
     setMessages([
       {
-        id: 1,
+        id: Date.now(),
         sender: 'ai',
-        text: "Chat history cleared. How can **Farmer AI** assist your field today?",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
+        text: 'Chat cleared. Ask questions about your crop, plant health or weather.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
     ]);
   };
 
-  const toggleVoice = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setInputQuery((current) => current || 'Voice input is not supported in this browser.');
-      return;
-    }
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = selectedLang === 'తెలుగు' ? 'te-IN' : selectedLang === 'हिन्दी' ? 'hi-IN' : selectedLang === 'தமிழ்' ? 'ta-IN' : 'en-IN';
-    recognition.onresult = (event) => setInputQuery(event.results[0][0].transcript);
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  };
-
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-10rem)] flex flex-col bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden">
-      
-      {/* Header Bar */}
-      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-700 text-white px-6 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-            <Bot className="w-6 h-6 text-emerald-200 animate-pulse" />
+    <div style={{ maxWidth: 850, margin: '0 auto', paddingBottom: '3.5rem' }}>
+
+      {/* ── Simple Header ── */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1.25rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.2rem 0.65rem',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--warning-bg)',
+              color: 'var(--warning-text)',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginBottom: '0.35rem',
+            }}
+          >
+            <Sparkles size={13} /> Gemini Crop Assistant
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-lg leading-tight">🌾 Gemini Farmer Assistant</h2>
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-              </span>
-            </div>
-            <p className="text-xs text-emerald-100/80">Ask about your crop, plant health, diseases, weather and farming.</p>
-          </div>
+          <h1
+            style={{
+              fontSize: 'clamp(1.5rem, 3.5vw, 2rem)',
+              fontWeight: 900,
+              color: 'var(--text-primary)',
+              margin: '0 0 0.25rem 0',
+            }}
+          >
+            🌾 Farmer AI
+          </h1>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0 }}>
+            Ask questions about your crop, plant health or weather.
+          </p>
         </div>
 
-        {/* Top Controls */}
-        <div className="flex items-center gap-2">
-          {/* Language Switcher */}
-          <div className="relative flex items-center bg-emerald-950/40 rounded-lg px-2.5 py-1 text-xs border border-emerald-500/30">
-            <Globe className="w-3.5 h-3.5 mr-1.5 text-emerald-300" />
+        {/* Clear and Plant Context */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          {plants.length > 0 && (
             <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value)}
-              className="bg-transparent text-emerald-100 focus:outline-none cursor-pointer font-medium"
+              value={selectedPlantId}
+              onChange={(e) => setSelectedPlantId(e.target.value)}
+              aria-label="Focus on specific plant"
+              style={{
+                maxWidth: 200,
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                padding: '0.4rem 0.75rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+                outline: 'none',
+              }}
             >
-              {languages.map((lang) => (
-                <option key={lang} value={lang} className="bg-slate-900 text-white">
-                  {lang}
+              <option value="">All Plants (General)</option>
+              {plants.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.crop_name} ({p.field_name || 'Field'})
                 </option>
               ))}
             </select>
-          </div>
+          )}
 
           <button
-            onClick={handleClearChat}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-            title="Clear Chat"
+            onClick={handleClear}
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: '0.78rem' }}
+            title="Reset conversation"
           >
-            <Trash2 className="w-4 h-4" />
+            Reset
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900">
-        <Sprout className="h-4 w-4 text-emerald-600" />
-        <label htmlFor="assistant-plant" className="text-xs font-bold text-slate-500">Plant context:</label>
-        <select id="assistant-plant" value={selectedPlantId} onChange={(event) => setSelectedPlantId(event.target.value)} className="min-h-9 max-w-[240px] rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          <option value="">No plant selected</option>
-          {plants.map((plant) => <option key={plant.id} value={plant.id}>{plant.crop_name} - {plant.field_name}</option>)}
-        </select>
-        <span className="text-[11px] text-slate-400">Only real saved scan history is shared.</span>
-      </div>
-
-      {/* Preset Suggestions */}
-      <div className="bg-slate-50 dark:bg-slate-950/60 px-4 py-2.5 border-b border-slate-200/60 dark:border-slate-800 overflow-x-auto flex items-center gap-2 scrollbar-none">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 shrink-0">
-          <Sparkles className="w-3 h-3 text-amber-500" /> Try asking:
-        </span>
-        {presetQueries.map((preset, idx) => (
+      {/* ── Quick Questions ── */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          marginBottom: '1rem',
+        }}
+      >
+        {QUICK_QUESTIONS.map((q) => (
           <button
-            key={idx}
-            onClick={() => handleSendMessage(preset)}
-            className="shrink-0 text-xs bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 px-3 py-1 rounded-full transition-all"
+            key={q}
+            onClick={() => handleSend(q)}
+            disabled={loading}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-full)',
+              padding: '0.4rem 0.85rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              transition: 'all 180ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--primary)';
+              e.currentTarget.style.color = 'var(--primary)';
+              e.currentTarget.style.background = 'var(--surface-secondary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.background = 'var(--surface)';
+            }}
           >
-            {preset}
+            "{q}"
           </button>
         ))}
       </div>
 
-      {/* Messages Scroll Container */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
-        {messages.map((msg) => {
-          const isUser = msg.sender === 'user';
-          return (
-            <div
-              key={msg.id}
-              className={`flex gap-3 max-w-[88%] ${isUser ? 'ml-auto flex-row-reverse' : ''}`}
-            >
-              {/* Avatar */}
+      {/* ── Chat Container ── */}
+      <div
+        className="card"
+        style={{
+          borderRadius: 'var(--radius-xl)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '62vh',
+          minHeight: 440,
+          background: 'var(--surface)',
+        }}
+      >
+        {/* Messages List */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}
+        >
+          {messages.map((msg) => {
+            const isAI = msg.sender === 'ai';
+            return (
               <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-                  isUser
-                    ? 'bg-slate-800 text-white'
-                    : 'bg-emerald-600 text-white'
-                }`}
+                key={msg.id}
+                style={{
+                  display: 'flex',
+                  gap: '0.75rem',
+                  alignItems: 'flex-start',
+                  justifyContent: isAI ? 'flex-start' : 'flex-end',
+                }}
               >
-                {isUser ? <User className="w-5 h-5" /> : <Sprout className="w-5 h-5" />}
-              </div>
+                {/* AI Avatar */}
+                {isAI && (
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      background: 'var(--primary)',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 6px color-mix(in srgb, var(--primary) 30%, transparent)',
+                    }}
+                  >
+                    <Bot size={18} />
+                  </div>
+                )}
 
-              {/* Message Bubble */}
-              <div className="space-y-1">
+                {/* Message Bubble */}
                 <div
-                  className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm relative group ${
-                    isUser
-                      ? 'bg-emerald-600 text-white rounded-tr-xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700/80 rounded-tl-xs'
-                  }`}
+                  style={{
+                    maxWidth: '82%',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '0.9rem 1.1rem',
+                    background: isAI ? 'var(--surface-secondary)' : 'var(--primary)',
+                    color: isAI ? 'var(--text-primary)' : '#FFFFFF',
+                    border: isAI ? '1px solid var(--border)' : 'none',
+                    fontSize: '0.9rem',
+                    lineHeight: 1.6,
+                    position: 'relative',
+                  }}
                 >
-                  <div className="whitespace-pre-wrap font-normal">
+                  <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {msg.text}
                   </div>
 
-                  {/* Copy Button */}
-                  {!isUser && (
-                    <button
-                      onClick={() => handleCopy(msg.text, msg.id)}
-                      className="absolute top-2 right-2 p-1.5 rounded-md bg-slate-100 dark:bg-slate-700 opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                      title="Copy response"
-                    >
-                      {copiedId === msg.id ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  )}
+                  {/* Bubble footer */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '0.5rem',
+                      marginTop: '0.4rem',
+                      fontSize: '0.72rem',
+                      color: isAI ? 'var(--text-muted)' : 'rgba(255,255,255,0.8)',
+                    }}
+                  >
+                    <span>{msg.timestamp}</span>
+                    {isAI && (
+                      <button
+                        onClick={() => handleCopy(msg.text, msg.id)}
+                        title="Copy message"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {copiedId === msg.id ? <Check size={13} color="var(--success)" /> : <Copy size={13} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div
-                  className={`text-[10px] text-slate-400 font-medium px-1 ${
-                    isUser ? 'text-right' : 'text-left'
-                  }`}
-                >
-                  {msg.timestamp}
-                </div>
+                {/* User Avatar */}
+                {!isAI && (
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      background: 'var(--surface-secondary)',
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <User size={18} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Typing indicator */}
+          {loading && (
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  background: 'var(--primary)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Bot size={18} />
+              </div>
+              <div
+                style={{
+                  background: 'var(--surface-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '0.7rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.85rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <RefreshCw size={14} className="animate-spin" style={{ color: 'var(--primary)' }} />
+                <span>Farmer AI is formulating agronomic advice…</span>
               </div>
             </div>
-          );
-        })}
+          )}
 
-        {loading && (
-          <div className="flex gap-3 max-w-[80%]">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-              <Bot className="w-5 h-5 animate-spin" />
-            </div>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-xs border border-slate-200 dark:border-slate-700 flex items-center gap-2 text-slate-500 text-sm">
-              <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-              <span>Farmer AI is formulating agronomist recommendations...</span>
-            </div>
-          </div>
-        )}
-
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Voice Listening Bar Indicator */}
-      {isListening && (
-        <div className="bg-amber-500/10 border-t border-amber-500/20 px-4 py-2 flex items-center justify-between text-amber-700 dark:text-amber-300 text-xs font-semibold">
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-            Listening to your voice input... (Speak now)
-          </span>
-          <button onClick={() => setIsListening(false)} className="underline">Cancel</button>
+          <div ref={chatEndRef} />
         </div>
-      )}
 
-      {/* Input Bar */}
-      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800">
+        {/* Chat Input Bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSendMessage();
+            handleSend();
           }}
-          className="flex items-center gap-2"
+          style={{
+            padding: '0.85rem 1rem',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--surface)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem',
+          }}
         >
-          <button
-            type="button"
-            onClick={toggleVoice}
-            className={`p-3 rounded-xl border transition-colors ${
-              isListening
-                ? 'bg-red-500 text-white border-red-600 animate-pulse'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
-            }`}
-            title="Voice Assistant"
-          >
-            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </button>
-
           <input
+            ref={inputRef}
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder="Ask Farmer AI (e.g., How to protect paddy from stem borer?)"
-            className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 text-sm"
+            placeholder="Type your crop question here…"
+            disabled={loading}
+            style={{
+              flex: 1,
+              height: 46,
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--input-background)',
+              border: '1.5px solid var(--input-border)',
+              color: 'var(--input-text)',
+              padding: '0 1rem',
+              fontSize: '0.9rem',
+              outline: 'none',
+              transition: 'border-color 180ms ease',
+            }}
           />
 
           <button
             type="submit"
-            disabled={!inputQuery.trim() || loading}
-            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-md shadow-emerald-950/20"
+            disabled={loading || !inputQuery.trim()}
+            className="btn btn-primary"
+            style={{
+              height: 46,
+              minHeight: 46,
+              padding: '0 1.25rem',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 800,
+            }}
           >
+            <Send size={16} />
             <span>Send</span>
-            <Send className="w-4 h-4" />
           </button>
         </form>
       </div>

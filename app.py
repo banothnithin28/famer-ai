@@ -326,6 +326,9 @@ def login():
         else:
             flash("Invalid email or password. Try demo: ramesh@farmer.ai / password123", "error")
 
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
     return render_template('login.html')
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -399,6 +402,9 @@ def register():
         finally:
             conn.close()
 
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
     return render_template('register.html')
 
 @app.route('/logout')
@@ -412,6 +418,10 @@ def dashboard():
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
+
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
 
     conn = get_db()
     latest_crop = conn.execute("SELECT * FROM crop_recommendations WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user['id'],)).fetchone()
