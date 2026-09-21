@@ -564,35 +564,147 @@ def api_auth_register():
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def api_auth_forgot_password():
     data = request.get_json() or {}
-    email = data.get('email', '').strip()
-    new_password = data.get('new_password', '')
-    confirm_password = data.get('confirm_password', '')
 
-    if not email or not new_password or not confirm_password:
-        return jsonify({'success': False, 'error': 'All fields are required.'}), 400
+    email = data.get('email', '').strip().lower()
 
-    if len(new_password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters long.'}), 400
-
-    if new_password != confirm_password:
-        return jsonify({'success': False, 'error': 'Passwords do not match.'}), 400
+    if not email:
+        return jsonify({
+            'success': False,
+            'error': 'Please enter your email address.'
+        }), 400
 
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+    user = conn.execute(
+        "SELECT id, email FROM users WHERE LOWER(email) = ?",
+        (email,)
+    ).fetchone()
+
+    conn.close()
 
     if not user:
-        conn.close()
-        return jsonify({'success': False, 'error': 'No farmer account found with that email address.'}), 404
+        return jsonify({
+            'success': True,
+            'message': 'If an account exists with this email, verification will be required.'
+        })
 
-    new_hash = generate_password_hash(new_password)
-    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user['id']))
-    conn.commit()
-    conn.close()
+    reset_token = secrets.token_urlsafe(32)
+    reset_expires = time.time() + (15 * 60)
+
+    session['password_reset_token'] = reset_token
+    session['password_reset_user_id'] = user['id']
+    session['password_reset_expires'] = reset_expires
+    session['password_reset_verified'] = False
+
+    print("Password reset requested for account.")
 
     return jsonify({
         'success': True,
-        'message': 'Password reset successful! You can now log in with your new password.'
+        'requires_verification': True,
+        'message': 'Verification required before creating a new password.'
     })
+
+@app.route('/api/auth/verify-reset', methods=['POST'])
+def api_auth_verify_reset():
+    data = request.get_json() or {}
+
+    token = data.get('token', '').strip()
+
+    saved_token = session.get('password_reset_token')
+    user_id = session.get('password_reset_user_id')
+    expires = session.get('password_reset_expires')
+
+    if not saved_token or not user_id or not expires:
+        return jsonify({
+            'success': False,
+            'error': 'Password reset session expired. Please start again.'
+        }), 400
+
+    if time.time() > expires:
+        session.pop('password_reset_token', None)
+        session.pop('password_reset_user_id', None)
+        session.pop('password_reset_expires', None)
+        session.pop('password_reset_verified', None)
+
+        return jsonify({
+            'success': False,
+            'error': 'Reset code expired. Please request a new one.'
+        }), 400
+
+    if not secrets.compare_digest(token, saved_token):
+        return jsonify({
+            'success': False,
+            'error': 'Invalid verification code.'
+        }), 400
+
+    session['password_reset_verified'] = True
+
+    return jsonify({
+        'success': True,
+        'message': 'Verification successful. You can now create a new password.'
+    })
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def api_auth_reset_password():
+    data = request.get_json() or {}
+
+    new_password = data.get('new_password', '')
+    confirm_password = data.get('confirm_password', '')
+
+    user_id = session.get('password_reset_user_id')
+    verified = session.get('password_reset_verified')
+    expires = session.get('password_reset_expires')
+
+    if not user_id or not verified:
+        return jsonify({
+            'success': False,
+            'error': 'Please verify your reset request first.'
+        }), 403
+
+    if not expires or time.time() > expires:
+        session.clear()
+
+        return jsonify({
+            'success': False,
+            'error': 'Reset session expired. Please start again.'
+        }), 400
+
+    if len(new_password) < 8:
+        return jsonify({
+            'success': False,
+            'error': 'Password must be at least 8 characters long.'
+        }), 400
+
+    if new_password != confirm_password:
+        return jsonify({
+            'success': False,
+            'error': 'Passwords do not match.'
+        }), 400
+
+    new_hash = generate_password_hash(new_password)
+
+    conn = get_db()
+
+    conn.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (new_hash, user_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    session.pop('password_reset_token', None)
+    session.pop('password_reset_user_id', None)
+    session.pop('password_reset_expires', None)
+    session.pop('password_reset_verified', None)
+
+    return jsonify({
+        'success': True,
+        'message': 'Password changed successfully. You can now log in.'
+    })
+
+    
 
 @app.route('/api/auth/me', methods=['GET'])
 def api_auth_me():
@@ -1178,23 +1290,97 @@ def api_delete_scan(scan_id):
             app.logger.warning('Could not remove deleted scan image')
     return jsonify({'success': True, 'message': 'Scan deleted successfully.'})
 
-
-# 3. Smart Irrigation Advisor API
+# 3. Live Weather & Smart Irrigation API
 @app.route('/api/weather', methods=['GET'])
 def api_weather():
     try:
-        latitude = float(request.args.get('latitude', ''))
-        longitude = float(request.args.get('longitude', ''))
-    except (TypeError, ValueError):
-        return jsonify({'success': False, 'error': 'Valid latitude and longitude are required.'}), 400
-    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
-        return jsonify({'success': False, 'error': 'Latitude or longitude is outside the valid range.'}), 400
+        # Support both:
+        # /api/weather?latitude=17.385&longitude=78.4867
+        # and:
+        # /api/weather?region=telangana
 
-    try:
-        return jsonify({'success': True, **fetch_live_weather(latitude, longitude)})
+        region = request.args.get('region', '').strip().lower()
+
+        REGION_COORDINATES = {
+            'telangana': {
+                'latitude': 17.3850,
+                'longitude': 78.4867,
+                'name': 'Telangana & AP'
+            },
+            'punjab': {
+                'latitude': 30.9010,
+                'longitude': 75.8573,
+                'name': 'Punjab & Haryana'
+            },
+            'up': {
+                'latitude': 25.3176,
+                'longitude': 82.9739,
+                'name': 'UP & Bihar'
+            },
+            'tamilnadu': {
+                'latitude': 13.0827,
+                'longitude': 80.2707,
+                'name': 'Tamil Nadu'
+            }
+        }
+
+        # If region is supplied, use its coordinates
+        if region:
+            location = REGION_COORDINATES.get(region)
+
+            if not location:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid weather region.'
+                }), 400
+
+            latitude = location['latitude']
+            longitude = location['longitude']
+
+            weather = fetch_live_weather(latitude, longitude)
+
+            return jsonify({
+                'success': True,
+                'region': location['name'],
+                **weather
+            })
+
+        # Otherwise support existing latitude/longitude requests
+        try:
+            latitude = float(request.args.get('latitude', ''))
+            longitude = float(request.args.get('longitude', ''))
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'error': 'Please provide a valid region or latitude and longitude.'
+            }), 400
+
+        if not -90 <= latitude <= 90:
+            return jsonify({
+                'success': False,
+                'error': 'Latitude is outside the valid range.'
+            }), 400
+
+        if not -180 <= longitude <= 180:
+            return jsonify({
+                'success': False,
+                'error': 'Longitude is outside the valid range.'
+            }), 400
+
+        weather = fetch_live_weather(latitude, longitude)
+
+        return jsonify({
+            'success': True,
+            **weather
+        })
+
     except Exception:
-        app.logger.warning('Live weather request failed')
-        return jsonify({'success': False, 'error': 'Weather information is temporarily unavailable.'}), 503
+        app.logger.exception('Live weather request failed')
+
+        return jsonify({
+            'success': False,
+            'error': 'Weather information is temporarily unavailable.'
+        }), 503
 
 
 @app.route('/api/irrigation-advice', methods=['POST'])
