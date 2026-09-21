@@ -9,6 +9,8 @@ import {
   Wind,
   ShieldCheck,
   CheckCircle2,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 import FarmScene from './FarmScene';
 import { getPlants, getWeather } from '../services/apiService';
@@ -207,7 +209,7 @@ export default function Dashboard({
       </section>
 
       {/* ─── Useful Current Agricultural Information (Informative, Not Duplicate Navigation Cards) ─── */}
-      <section aria-label="Current Farm Information">
+      <section aria-label="Current Farm Information" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <div
           style={{
             display: 'grid',
@@ -215,83 +217,7 @@ export default function Dashboard({
             gap: '1.25rem',
           }}
         >
-          {/* Information Card 1: Today's Field Weather Telemetry */}
-          <div
-            className="card"
-            style={{
-              padding: '1.4rem',
-              borderRadius: 'var(--radius-xl)',
-              background: 'var(--surface)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
-              <div style={{
-                width: 38, height: 38, borderRadius: 10,
-                background: 'var(--info-bg)', color: 'var(--info)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <CloudSun size={20} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-                  Live Telemetry
-                </span>
-                <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  Current Weather
-                </h2>
-              </div>
-            </div>
-
-            {loadingWeather ? (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Loading live weather…</p>
-            ) : currentTemp !== null ? (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.6rem' }}>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
-                    {currentTemp}°C
-                  </span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                    {currentCondition}
-                  </span>
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.5rem',
-                  fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
-                  borderTop: '1px solid var(--border)',
-                  paddingTop: '0.65rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Droplets size={13} style={{ color: 'var(--info)' }} />
-                    <span>Humidity: {humidity}%</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <CloudRain size={13} style={{ color: 'var(--info)' }} />
-                    <span>Rain prob: {rainProb}%</span>
-                  </div>
-                  {windSpeed !== null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Wind size={13} style={{ color: 'var(--text-muted)' }} />
-                      <span>Wind: {windSpeed} km/h</span>
-                    </div>
-                  )}
-                  {feelsLike !== null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Thermometer size={13} style={{ color: 'var(--warning)' }} />
-                      <span>Feels: {feelsLike}°C</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Live weather active.</p>
-            )}
-          </div>
-
-          {/* Information Card 2: Crop Registry Status */}
+          {/* Summary Section 1: 🌿 My Plants */}
           <div
             className="card"
             style={{
@@ -313,7 +239,7 @@ export default function Dashboard({
                   Farm Status
                 </span>
                 <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  Monitored Crops
+                  🌿 My Plants
                 </h2>
               </div>
             </div>
@@ -351,7 +277,7 @@ export default function Dashboard({
             )}
           </div>
 
-          {/* Information Card 3: Real-Time Irrigation Guidance */}
+          {/* Summary Section 2: 🌦️ Weather */}
           <div
             className="card"
             style={{
@@ -363,35 +289,115 @@ export default function Dashboard({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
               <div style={{
                 width: 38, height: 38, borderRadius: 10,
-                background: 'var(--warning-bg)', color: 'var(--warning-text)',
+                background: 'var(--info-bg)', color: 'var(--info)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <ShieldCheck size={20} />
+                <CloudSun size={20} />
               </div>
               <div>
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-                  Smart Water
+                  Live Telemetry
                 </span>
                 <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  Irrigation Advisory
+                  🌦️ Weather
+                </h2>
+              </div>
+            </div>
+
+            {loadingWeather ? (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Loading live weather…</p>
+            ) : currentTemp !== null ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
+                    {currentTemp}°C
+                  </span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    {currentCondition}
+                  </span>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.5rem',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                  borderTop: '1px solid var(--border)',
+                  paddingTop: '0.65rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Droplets size={13} style={{ color: 'var(--info)' }} />
+                    <span>Humidity: {humidity}%</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <CloudRain size={13} style={{ color: 'var(--info)' }} />
+                    <span>Rain: {rainProb}%</span>
+                  </div>
+                  {windSpeed !== null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Wind size={13} style={{ color: 'var(--text-muted)' }} />
+                      <span>Wind: {windSpeed} km/h</span>
+                    </div>
+                  )}
+                  {feelsLike !== null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Thermometer size={13} style={{ color: 'var(--warning)' }} />
+                      <span>Feels: {feelsLike}°C</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Live weather active.</p>
+            )}
+          </div>
+
+          {/* Summary Section 3: 🤖 Farmer AI */}
+          <div
+            className="card"
+            style={{
+              padding: '1.4rem',
+              borderRadius: 'var(--radius-xl)',
+              background: 'var(--surface)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: 'color-mix(in srgb, var(--primary) 15%, transparent)', color: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Bot size={20} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
+                  AI Agronomist
+                </span>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  🤖 Farmer AI
                 </h2>
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                {irrigationAdvice.title}
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Instant Agricultural Intelligence
               </div>
               <p style={{
                 fontSize: '0.825rem',
                 color: 'var(--text-secondary)',
                 lineHeight: 1.5,
-                margin: 0,
+                margin: '0 0 0.65rem 0',
                 borderTop: '1px solid var(--border)',
                 paddingTop: '0.65rem'
               }}>
-                {irrigationAdvice.detail}
+                Ask questions about crop pests, fertilizer doses, soil treatments, and day-to-day farming advice.
               </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
+                <Sparkles size={13} />
+                <span>Contextual assistance available</span>
+              </div>
             </div>
           </div>
         </div>

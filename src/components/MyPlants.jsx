@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   Sprout,
-  Camera,
   Plus,
-  ArrowRight,
   RefreshCw,
   AlertTriangle,
-  Calendar,
   MapPin,
   CheckCircle2,
   AlertCircle,

@@ -517,7 +517,7 @@ export default function DiseaseScanner({ plantId, onAskAI, onOpenPlantDetails })
                     </button>
                   )}
                   {onAskAI && (
-                    <button className="btn btn-secondary" onClick={onAskAI} id="ask-ai-from-scan-btn">
+                    <button className="btn btn-secondary" onClick={() => onAskAI(Number(selectedPlantId))} id="ask-ai-from-scan-btn">
                       <Bot size={16} /> Ask Farmer AI
                     </button>
                   )}

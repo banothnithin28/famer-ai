@@ -409,7 +409,7 @@ function ScanHistoryItem({ scan, index, total, isSelected, onToggleSelect, onDel
 
 /* ─────────────────────────── Main PlantDetails Component ─────────────────────────── */
 
-export default function PlantDetails({ plantId, onBack, onAskAI, onOpenScanner }) {
+export default function PlantDetails({ plantId, onBack, onAskAI }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -777,11 +777,6 @@ export default function PlantDetails({ plantId, onBack, onAskAI, onOpenScanner }
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 1rem' }}>
               Scan this plant with your camera to begin recording health assessments and tracking trends over time.
             </p>
-            {onOpenScanner && (
-              <button type="button" onClick={onOpenScanner} className="btn btn-primary btn-sm">
-                <Camera size={14} /> Run First Scan
-              </button>
-            )}
           </div>
         ) : filteredHistory.length === 1 ? (
           <div style={{ padding: '2rem 1rem', textAlign: 'center', background: 'var(--surface-subtle)', borderRadius: 'var(--radius-lg)' }}>
@@ -900,15 +895,6 @@ export default function PlantDetails({ plantId, onBack, onAskAI, onOpenScanner }
             </p>
           </div>
 
-          {onOpenScanner && (
-            <button
-              type="button"
-              onClick={onOpenScanner}
-              className="btn btn-primary btn-sm"
-            >
-              <Camera size={14} /> New Scan
-            </button>
-          )}
         </div>
 
         {timelineScans.length === 0 ? (

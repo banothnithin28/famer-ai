@@ -7,6 +7,7 @@ import RegisterPlant from './components/RegisterPlant';
 import DiseaseScanner from './components/DiseaseScanner';
 import WeatherAdvisor from './components/WeatherAdvisor';
 import AIChatbot from './components/AIChatbot';
+import FarmerTools from './components/FarmerTools';
 import AuthModal from './components/AuthModal';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
@@ -284,6 +285,11 @@ export default function App() {
         {/* 5. Farmer AI (🤖 Farmer AI) */}
         {activeTab === 'chat' && (
           <AIChatbot plantId={chatPlantId} />
+        )}
+
+        {/* 6. Farmer Tools (🧰 Farmer Tools) */}
+        {activeTab === 'tools' && (
+          <FarmerTools onNavigateTab={(tab) => navigateTo(tab)} />
         )}
 
       </main>

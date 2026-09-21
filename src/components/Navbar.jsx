@@ -10,14 +10,16 @@ import {
   Moon,
   User,
   LogOut,
+  Wrench,
 } from 'lucide-react';
 
 const navItems = [
-  { id: 'dashboard', label: 'Home', icon: Home },
-  { id: 'plants',    label: 'My Plants', icon: Sprout },
-  { id: 'scanner',   label: 'Scan Plant', icon: Camera, isPrimary: true },
-  { id: 'weather',   label: 'Weather', icon: CloudSun },
-  { id: 'chat',      label: 'Farmer AI', icon: Bot },
+  { id: 'dashboard', label: 'Home', mobileLabel: 'Home', icon: Home },
+  { id: 'plants',    label: 'My Plants', mobileLabel: 'Plants', icon: Sprout },
+  { id: 'scanner',   label: 'Scan Plant', mobileLabel: 'Scan', icon: Camera, isPrimary: true },
+  { id: 'weather',   label: 'Weather', mobileLabel: 'Weather', icon: CloudSun },
+  { id: 'chat',      label: 'Farmer AI', mobileLabel: 'AI', icon: Bot },
+  { id: 'tools',     label: 'Farmer Tools', mobileLabel: 'Tools', icon: Wrench },
 ];
 
 export default function Navbar({
@@ -275,7 +277,7 @@ export default function Navbar({
         </div>
       </header>
 
-      {/* ─── Mobile Bottom Tab Bar (5 Core Features) ─── */}
+      {/* ─── Mobile Bottom Tab Bar (6 Core Features) ─── */}
       <nav
         className="bottom-nav lg:hidden"
         aria-label="Mobile Navigation"
@@ -288,15 +290,15 @@ export default function Navbar({
           height: 'var(--bottom-nav-height)',
           background: 'var(--surface)',
           borderTop: '1px solid var(--border)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
+          gridTemplateColumns: 'repeat(6, 1fr)',
           alignItems: 'center',
           zIndex: 50,
           boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'
         }}
       >
-        {navItems.map(({ id, label, icon: Icon, isPrimary }) => {
+        {navItems.map(({ id, label, mobileLabel, icon: Icon, isPrimary }) => {
           const isActive = activeTab === id || (id === 'plants' && activeTab === 'plant-details');
+          const displayLabel = mobileLabel || label;
 
           if (isPrimary) {
             return (
@@ -313,13 +315,13 @@ export default function Navbar({
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: '4px 0',
+                  padding: '2px 0',
                 }}
               >
                 <span
                   style={{
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
                     borderRadius: '50%',
                     background: 'var(--primary)',
                     color: '#FFFFFF',
@@ -327,20 +329,21 @@ export default function Navbar({
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: '0 2px 10px color-mix(in srgb, var(--primary) 40%, transparent)',
-                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
                     transition: 'all 180ms ease',
-                    marginTop: -10,
+                    marginTop: -8,
                   }}
                 >
-                  <Icon size={22} />
+                  <Icon size={20} />
                 </span>
                 <span style={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.62rem',
                   fontWeight: 800,
                   color: 'var(--primary)',
                   marginTop: 2,
+                  whiteSpace: 'nowrap',
                 }}>
-                  {label}
+                  {displayLabel}
                 </span>
               </button>
             );
@@ -360,18 +363,19 @@ export default function Navbar({
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '6px 0',
+                padding: '4px 0',
                 color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                 transition: 'all 180ms ease',
               }}
             >
-              <Icon size={20} style={{ marginBottom: 2 }} />
+              <Icon size={18} style={{ marginBottom: 2 }} />
               <span style={{
-                fontSize: '0.68rem',
+                fontSize: '0.62rem',
                 fontWeight: isActive ? 800 : 600,
                 color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
               }}>
-                {label}
+                {displayLabel}
               </span>
             </button>
           );

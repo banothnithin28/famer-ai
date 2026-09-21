@@ -32,24 +32,41 @@ function formatDate(date) {
   return new Date(`${date}T12:00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function irrigationAdvice(weather) {
+function irrigationAdvice(weather, crop = 'general', stage = 'vegetative') {
   if (!weather) return { action: 'NOT ENOUGH DATA FOR IRRIGATION ADVICE', reason: 'Live weather data is not available right now.' };
   const rain = weather.next_18_hours?.precipitation ?? 0;
   const probability = weather.next_18_hours?.rain_probability ?? 0;
+
   if (rain >= 5 || probability >= 70) {
     return {
       action: 'DEFER IRRIGATION',
-      reason: `${rain} mm precipitation expected in next 18 hours (${probability}% rain chance). Save water and recheck tomorrow.`
+      reason: `${rain} mm precipitation forecast in next 18 hours (${probability}% rain chance). Defer irrigation to save groundwater and prevent fertilizer leaching.`
     };
   }
+
+  if (crop === 'paddy') {
+    return {
+      action: 'MAINTAIN SHALLOW WATER (2–3 CM)',
+      reason: `Low rain forecast (${rain} mm). Paddy requires consistent shallow standing water during vegetative and tillering stages.`
+    };
+  }
+
+  if (crop === 'cotton' || crop === 'chilli') {
+    return {
+      action: 'CHECK SOIL DEPTH (SENSITIVE TO WATERLOGGING)',
+      reason: `Only ${rain} mm rain forecast. ${crop.charAt(0).toUpperCase() + crop.slice(1)} roots are sensitive to over-watering; inspect soil moisture at 2-inch depth before irrigating.`
+    };
+  }
+
   return {
     action: 'CHECK SOIL BEFORE IRRIGATING',
-    reason: `Only ${rain} mm rain forecast in next 18 hours. Check soil depth before watering.`
+    reason: `Only ${rain} mm rain forecast in next 18 hours. Check physical soil moisture depth before operating pumps.`
   };
 }
 
 export default function WeatherAdvisor() {
   const [selectedLocation, setSelectedLocation] = useState('deccan');
+  const [irrigationCrop, setIrrigationCrop] = useState('general');
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,7 +95,7 @@ export default function WeatherAdvisor() {
     return () => window.clearInterval(refreshTimer);
   }, [selectedLocation]);
 
-  const advice = irrigationAdvice(weather);
+  const advice = irrigationAdvice(weather, irrigationCrop);
   const current = weather?.current;
   const forecast = weather?.forecast || [];
 
@@ -244,9 +261,37 @@ export default function WeatherAdvisor() {
               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: '0.4rem 0 0.25rem 0' }}>
                 {advice.action}
               </h2>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 0.65rem 0', lineHeight: 1.5 }}>
                 {advice.reason}
               </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid color-mix(in srgb, var(--border) 60%, transparent)', paddingTop: '0.5rem' }}>
+                <label htmlFor="irrigation-crop-select" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                  Tailor for Crop:
+                </label>
+                <select
+                  id="irrigation-crop-select"
+                  value={irrigationCrop}
+                  onChange={(e) => setIrrigationCrop(e.target.value)}
+                  style={{
+                    padding: '0.2rem 0.55rem',
+                    fontSize: '0.78rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--text-primary)',
+                    fontWeight: 700,
+                  }}
+                >
+                  <option value="general">General Field Crops</option>
+                  <option value="paddy">Paddy / Rice (Standing water need)</option>
+                  <option value="cotton">Cotton (Waterlogging sensitive)</option>
+                  <option value="chilli">Chilli (Moisture stress sensitive)</option>
+                </select>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  • Verified against real forecast rain & humidity. Always confirm manual soil depth before operating pumps.
+                </span>
+              </div>
             </div>
           </div>
 
