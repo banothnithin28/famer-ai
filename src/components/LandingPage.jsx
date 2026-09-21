@@ -5,16 +5,12 @@ import {
   CloudSun,
   Bot,
   ArrowRight,
-  ShieldCheck,
-  Sparkles,
-  LineChart,
   CheckCircle2,
   Lock,
   ChevronRight,
   Sun,
   Moon,
   Sprout,
-  Compass,
 } from 'lucide-react';
 import FarmScene from './FarmScene';
 
@@ -24,8 +20,8 @@ export default function LandingPage({ onLogin, onSignUp, darkMode, setDarkMode }
       id: 'plant-health',
       icon: Sprout,
       emoji: '🌱',
-      title: 'Plant Health',
-      desc: 'Monitor your plants using regular photos.',
+      title: 'Plant Health Tracking',
+      desc: "Monitor plant condition over time with regular photos and health history logs.",
       accent: 'var(--primary)',
       badge: 'Continuous Tracking',
     },
@@ -33,8 +29,8 @@ export default function LandingPage({ onLogin, onSignUp, darkMode, setDarkMode }
       id: 'ai-detection',
       icon: Camera,
       emoji: '🔍',
-      title: 'AI Detection',
-      desc: 'Identify possible crop problems from plant images.',
+      title: 'AI Disease Detection',
+      desc: 'Analyze leaf photos with trained AI models to detect crop diseases early.',
       accent: '#2e7d32',
       badge: 'ML Diagnostic',
     },
@@ -43,7 +39,7 @@ export default function LandingPage({ onLogin, onSignUp, darkMode, setDarkMode }
       icon: CloudSun,
       emoji: '🌦️',
       title: 'Weather Intelligence',
-      desc: 'Understand local weather and rainfall conditions.',
+      desc: 'Hyper-local temperature, rain probability, and smart irrigation advice.',
       accent: '#0284c7',
       badge: 'Hyper-local Forecast',
     },
@@ -51,38 +47,10 @@ export default function LandingPage({ onLogin, onSignUp, darkMode, setDarkMode }
       id: 'farmer-assistant',
       icon: Bot,
       emoji: '🤖',
-      title: 'Farmer Assistant',
-      desc: 'Get simple AI-powered explanations and guidance.',
+      title: 'Farmer AI Assistant',
+      desc: 'Get easy-to-understand explanations and remedies in English, Telugu, or Hindi.',
       accent: '#7c3aed',
       badge: 'Multilingual Advice',
-    },
-  ];
-
-  const highlights = [
-    {
-      emoji: '🌱',
-      title: 'Monitor Plant Health',
-      desc: "Track your plant's condition through regular photos and historical logs.",
-    },
-    {
-      emoji: '🔍',
-      title: 'Detect Possible Problems',
-      desc: 'Analyze plant images using trained AI and computer vision models.',
-    },
-    {
-      emoji: '📊',
-      title: 'Track Changes',
-      desc: 'Compare scans over time and view plant health trends side by side.',
-    },
-    {
-      emoji: '🌦️',
-      title: 'Understand Weather',
-      desc: 'View local temperature, rain probability, and make informed irrigation decisions.',
-    },
-    {
-      emoji: '🤖',
-      title: 'Ask Farmer AI',
-      desc: 'Get easy-to-understand explanations and practical guidance in English, Telugu, or Hindi.',
     },
   ];
 
@@ -618,205 +586,6 @@ export default function LandingPage({ onLogin, onSignUp, darkMode, setDarkMode }
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* ─── Detailed Platform Capabilities Section ─── */}
-      <section
-        id="platform-capabilities"
-        style={{
-          background: 'var(--surface)',
-          borderTop: '1px solid var(--border)',
-          borderBottom: '1px solid var(--border)',
-          padding: '4rem 1.25rem',
-        }}
-      >
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <span
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--primary)',
-                marginBottom: '0.4rem',
-                display: 'block',
-              }}
-            >
-              Comprehensive Toolkit
-            </span>
-            <h2
-              style={{
-                fontSize: 'clamp(1.5rem, 3vw, 2.2rem)',
-                fontWeight: 850,
-                color: 'var(--text-primary)',
-                marginBottom: '0.75rem',
-              }}
-            >
-              Everything Farmers Need to Make Better Decisions
-            </h2>
-            <p
-              style={{
-                fontSize: '0.96rem',
-                color: 'var(--text-secondary)',
-                maxWidth: 680,
-                margin: '0 auto',
-                lineHeight: 1.6,
-              }}
-            >
-              Helping farmers understand their crops through AI-powered plant monitoring,
-              disease detection, weather intelligence, and simple farming guidance.
-            </p>
-          </div>
-
-          {/* Highlights List */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '1.5rem',
-            }}
-          >
-            {highlights.map((item, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: 'var(--surface-subtle)',
-                  padding: '1.5rem',
-                  borderRadius: 14,
-                  border: '1px solid var(--border)',
-                  display: 'flex',
-                  gap: '1rem',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '1.5rem',
-                    flexShrink: 0,
-                    width: 44,
-                    height: 44,
-                    borderRadius: 10,
-                    background: 'var(--surface)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  {item.emoji}
-                </div>
-                <div>
-                  <h4
-                    style={{
-                      fontSize: '1.02rem',
-                      fontWeight: 800,
-                      color: 'var(--text-primary)',
-                      marginBottom: '0.3rem',
-                    }}
-                  >
-                    {item.title}
-                  </h4>
-                  <p
-                    style={{
-                      fontSize: '0.86rem',
-                      color: 'var(--text-secondary)',
-                      lineHeight: 1.55,
-                      margin: 0,
-                    }}
-                  >
-                    {item.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Bottom CTA Banner ─── */}
-      <section
-        style={{
-          padding: '4rem 1.25rem',
-          maxWidth: 900,
-          margin: '0 auto',
-          textAlign: 'center',
-          width: '100%',
-        }}
-      >
-        <div
-          style={{
-            background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, var(--surface)) 0%, var(--surface) 100%)',
-            border: '1px solid color-mix(in srgb, var(--primary) 25%, var(--border))',
-            borderRadius: 20,
-            padding: '3rem 2rem',
-            boxShadow: 'var(--shadow-md)',
-          }}
-        >
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🌱</div>
-          <h2
-            style={{
-              fontSize: 'clamp(1.5rem, 3vw, 2.1rem)',
-              fontWeight: 850,
-              color: 'var(--text-primary)',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Ready to Monitor Your Crops With AI?
-          </h2>
-          <p
-            style={{
-              fontSize: '0.96rem',
-              color: 'var(--text-secondary)',
-              maxWidth: 540,
-              margin: '0 auto 2rem',
-              lineHeight: 1.6,
-            }}
-          >
-            Join FarmerAI today. Upload plant photos, analyze leaf symptoms, and receive
-            tailored agricultural guidance.
-          </p>
-
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '1rem',
-            }}
-          >
-            <button
-              onClick={onSignUp}
-              id="cta-signup-btn"
-              className="btn btn-primary"
-              style={{
-                padding: '0.85rem 2rem',
-                fontSize: '1rem',
-                fontWeight: 750,
-                borderRadius: 12,
-              }}
-            >
-              Create Account Free <ArrowRight size={17} />
-            </button>
-            <button
-              onClick={onLogin}
-              id="cta-login-btn"
-              style={{
-                padding: '0.85rem 2rem',
-                fontSize: '1rem',
-                fontWeight: 700,
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-              }}
-            >
-              Sign In Existing Farm
-            </button>
-          </div>
         </div>
       </section>
 

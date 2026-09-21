@@ -15,7 +15,7 @@ async function request(endpoint, options = {}) {
   const response = await fetch(apiUrl(endpoint), {
     ...options,
     headers: defaultHeaders,
-    credentials: API_BASE_URL ? 'include' : 'same-origin'
+    credentials: 'include'
   });
 
   const data = await response.json().catch(() => ({}));
@@ -40,11 +40,31 @@ export async function registerFarmer(userData) {
   });
 }
 
-export async function forgotPassword(email, new_password, confirm_password) {
+// Multi-step Forgot Password Flow
+export async function requestPasswordReset(email) {
   return request('/api/auth/forgot-password', {
     method: 'POST',
-    body: JSON.stringify({ email, new_password, confirm_password })
+    body: JSON.stringify({ email })
   });
+}
+
+export async function verifyResetCode(token) {
+  return request('/api/auth/verify-reset', {
+    method: 'POST',
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function resetPassword(new_password, confirm_password) {
+  return request('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ new_password, confirm_password })
+  });
+}
+
+// Backward compatibility alias
+export async function forgotPassword(email) {
+  return requestPasswordReset(email);
 }
 
 export async function getCurrentUser() {

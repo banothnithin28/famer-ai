@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import {
   X, User, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle,
-  Leaf, KeyRound,
+  Leaf, KeyRound, ShieldCheck, RotateCw,
 } from 'lucide-react';
-import { loginFarmer, registerFarmer, forgotPassword } from '../services/apiService';
+import {
+  loginFarmer,
+  registerFarmer,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPassword,
+} from '../services/apiService';
 
 /* ─── Reusable form input ─── */
-function AuthInput({ type = 'text', icon: Icon, value, onChange, placeholder, required, minLength, id }) {
+function AuthInput({ type = 'text', icon: Icon, value, onChange, placeholder, required, minLength, id, autoFocus }) {
   return (
     <div style={{ position: 'relative' }}>
       {Icon && (
@@ -21,6 +27,7 @@ function AuthInput({ type = 'text', icon: Icon, value, onChange, placeholder, re
         onChange={onChange}
         placeholder={placeholder}
         className="form-input"
+        autoFocus={autoFocus}
         style={{ paddingLeft: Icon ? '2.25rem' : undefined }}
       />
     </div>
@@ -43,13 +50,25 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const [soilType, setSoilType] = useState('Black');
   const [primaryCrop, setPrimaryCrop] = useState('Cotton');
 
-  // Forgot password
-  const [newPassword, setNewPassword]       = useState('');
+  // Multi-step Forgot password
+  const [forgotStep, setForgotStep] = useState('email'); // 'email' | 'verify' | 'new-password' | 'success'
+  const [verificationCode, setVerificationCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [demoCodeHint, setDemoCodeHint] = useState('');
 
   if (!isOpen) return null;
 
-  const reset = (nextMode) => { setMode(nextMode); setError(''); setSuccessMsg(''); };
+  const reset = (nextMode) => {
+    setMode(nextMode);
+    setForgotStep('email');
+    setVerificationCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setDemoCodeHint('');
+    setError('');
+    setSuccessMsg('');
+  };
 
   const handleFillDemo = () => { setEmail('ramesh@farmer.ai'); setPassword('password123'); setError(''); };
 
@@ -77,15 +96,67 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     } finally { setLoading(false); }
   };
 
-  const handleForgotPassword = async (e) => {
+  // Step 1: Send verification code
+  const handleSendResetCode = async (e) => {
     e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Please enter your registered email address.');
+      return;
+    }
     setLoading(true); setError(''); setSuccessMsg('');
     try {
-      const data = await forgotPassword(email, newPassword, confirmPassword);
-      setSuccessMsg(data.message || 'Password reset successfully!');
-      setTimeout(() => { setMode('login'); setPassword(newPassword); setSuccessMsg('You can now log in with your new password.'); }, 1500);
+      const data = await requestPasswordReset(cleanEmail);
+      if (data.verification_code) {
+        setDemoCodeHint(data.verification_code);
+      }
+      setSuccessMsg(data.message || 'Verification code sent to your email.');
+      setForgotStep('verify');
     } catch (err) {
-      setError(err.message || 'Failed to reset password.');
+      setError(err.message || 'Unable to request password reset.');
+    } finally { setLoading(false); }
+  };
+
+  // Step 2: Verify code
+  const handleVerifyResetCode = async (e) => {
+    e.preventDefault();
+    const cleanCode = verificationCode.trim();
+    if (!cleanCode) {
+      setError('Please enter the verification code.');
+      return;
+    }
+    setLoading(true); setError(''); setSuccessMsg('');
+    try {
+      const data = await verifyResetCode(cleanCode);
+      setSuccessMsg(data.message || 'Code verified! Enter your new password.');
+      setForgotStep('new-password');
+    } catch (err) {
+      setError(err.message || 'Invalid or expired verification code.');
+    } finally { setLoading(false); }
+  };
+
+  // Step 3: Set new password
+  const handleFinalResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || !confirmPassword) {
+      setError('Please fill in both password fields.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true); setError(''); setSuccessMsg('');
+    try {
+      const data = await resetPassword(newPassword, confirmPassword);
+      setSuccessMsg(data.message || 'Password reset successfully!');
+      setForgotStep('success');
+    } catch (err) {
+      setError(err.message || 'Failed to update password.');
     } finally { setLoading(false); }
   };
 
@@ -116,10 +187,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             </div>
             <div>
               <div style={{ fontWeight: 900, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                {mode === 'login' ? 'Welcome Back' : mode === 'register' ? 'Join Farmer AI' : 'Reset Password'}
+                {mode === 'login' ? 'Welcome Back' : mode === 'register' ? 'Join Farmer AI' : forgotStep === 'verify' ? 'Verify Reset Code' : forgotStep === 'new-password' ? 'Create New Password' : forgotStep === 'success' ? 'Password Reset' : 'Reset Password'}
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                {mode === 'login' ? 'Sign in to your farm' : mode === 'register' ? 'Create your free account' : 'Recover your account'}
+                {mode === 'login' ? 'Sign in to your farm' : mode === 'register' ? 'Create your free account' : forgotStep === 'verify' ? 'Enter 6-digit code' : forgotStep === 'new-password' ? 'Minimum 8 characters' : forgotStep === 'success' ? 'Ready to log in' : 'Recover your account'}
               </div>
             </div>
           </div>
@@ -257,31 +328,111 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             </form>
           )}
 
-          {/* ── Forgot Password Form ── */}
-          {mode === 'forgot' && (
-            <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Enter your registered email and choose a new password.
+          {/* ── Multi-step Forgot Password Flow ── */}
+          {mode === 'forgot' && forgotStep === 'email' && (
+            <form onSubmit={handleSendResetCode} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                Enter your registered email address to receive a 6-digit verification code.
               </p>
               <div>
-                <label className="form-label" htmlFor="forgot-email">Registered Email</label>
-                <AuthInput id="forgot-email" type="email" icon={Mail} value={email} onChange={e => setEmail(e.target.value)} placeholder="ramesh@farmer.ai" required />
+                <label className="form-label" htmlFor="modal-forgot-email">Registered Email</label>
+                <AuthInput id="modal-forgot-email" type="email" icon={Mail} value={email} onChange={e => setEmail(e.target.value)} placeholder="ramesh@farmer.ai" required autoFocus />
               </div>
-              <div>
-                <label className="form-label" htmlFor="forgot-new-password">New Password (min 6 chars)</label>
-                <AuthInput id="forgot-new-password" type="password" icon={KeyRound} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-              </div>
-              <div>
-                <label className="form-label" htmlFor="forgot-confirm-password">Confirm New Password</label>
-                <AuthInput id="forgot-confirm-password" type="password" icon={KeyRound} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-              </div>
-              <button type="submit" disabled={loading} className="btn btn-primary" id="reset-password-btn" style={{ width: '100%' }}>
-                {loading ? 'Updating…' : 'Update Password'} <ArrowRight size={16} />
+              <button type="submit" disabled={loading} className="btn btn-primary" id="modal-send-code-btn" style={{ width: '100%', marginTop: '0.25rem' }}>
+                {loading ? 'Sending Code…' : 'Send Verification Code'} <ArrowRight size={16} />
               </button>
               <button type="button" onClick={() => reset('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', padding: '0.25rem 0' }}>
                 ← Back to Sign In
               </button>
             </form>
+          )}
+
+          {mode === 'forgot' && forgotStep === 'verify' && (
+            <form onSubmit={handleVerifyResetCode} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              <div style={{ padding: '0.65rem 0.85rem', background: 'var(--surface-subtle)', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Code sent to: <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>
+                {demoCodeHint && (
+                  <div
+                    onClick={() => setVerificationCode(demoCodeHint)}
+                    style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 800, marginTop: '0.3rem' }}
+                  >
+                    🔑 Demo code: <code>{demoCodeHint}</code> (Click to auto-fill)
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="form-label" htmlFor="modal-verify-token">Verification Code</label>
+                <AuthInput id="modal-verify-token" type="text" icon={KeyRound} value={verificationCode} onChange={e => setVerificationCode(e.target.value)} placeholder="e.g. 123456" required autoFocus />
+              </div>
+              <button type="submit" disabled={loading} className="btn btn-primary" id="modal-verify-code-btn" style={{ width: '100%' }}>
+                {loading ? 'Verifying…' : 'Verify Code'} <ArrowRight size={16} />
+              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                <button type="button" onClick={handleSendResetCode} disabled={loading} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <RotateCw size={12} /> Resend Code
+                </button>
+                <button type="button" onClick={() => setForgotStep('email')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}>
+                  Change Email
+                </button>
+              </div>
+              <button type="button" onClick={() => reset('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', padding: '0.25rem 0' }}>
+                ← Back to Sign In
+              </button>
+            </form>
+          )}
+
+          {mode === 'forgot' && forgotStep === 'new-password' && (
+            <form onSubmit={handleFinalResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              <div style={{ padding: '0.5rem 0.75rem', background: 'var(--success-bg)', borderRadius: 8, fontSize: '0.78rem', color: 'var(--success-text)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <ShieldCheck size={15} /> Code verified. Set your new password.
+              </div>
+              <div>
+                <label className="form-label" htmlFor="modal-new-password">New Password (min 8 chars)</label>
+                <AuthInput id="modal-new-password" type="password" icon={Lock} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" required minLength={8} autoFocus />
+              </div>
+              <div>
+                <label className="form-label" htmlFor="modal-confirm-password">Confirm New Password</label>
+                <AuthInput id="modal-confirm-password" type="password" icon={Lock} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" required minLength={8} />
+              </div>
+              <button type="submit" disabled={loading} className="btn btn-primary" id="modal-reset-password-btn" style={{ width: '100%', marginTop: '0.25rem' }}>
+                {loading ? 'Updating…' : 'Reset Password'} <ArrowRight size={16} />
+              </button>
+              <button type="button" onClick={() => reset('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', padding: '0.25rem 0' }}>
+                ← Back to Sign In
+              </button>
+            </form>
+          )}
+
+          {mode === 'forgot' && forgotStep === 'success' && (
+            <div style={{ textAlign: 'center', padding: '0.75rem 0' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--success-bg)', color: 'var(--success-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                <CheckCircle2 size={26} />
+              </div>
+              <div style={{ fontWeight: 850, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Password Reset Successfully!
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                Your password has been securely updated. You can now sign in.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setForgotStep('email');
+                  setPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setVerificationCode('');
+                  setError('');
+                  setSuccessMsg('Password updated! Please sign in.');
+                }}
+                className="btn btn-primary"
+                id="modal-login-now-btn"
+                style={{ width: '100%' }}
+              >
+                Sign In Now <ArrowRight size={16} />
+              </button>
+            </div>
           )}
         </div>
       </div>

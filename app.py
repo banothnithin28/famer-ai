@@ -481,7 +481,7 @@ def chatbot():
 @app.route('/api/auth/login', methods=['POST'])
 def api_auth_login():
     data = request.get_json() or {}
-    email = data.get('email', '').strip()
+    email = data.get('email', '').strip().lower()
     password = data.get('password', '')
 
     if not email or not password:
@@ -524,7 +524,7 @@ def api_auth_register():
     if not name or not email or not password:
         return jsonify({'success': False, 'error': 'Name, email, and password are required.'}), 400
 
-    if len(password) < 6:
+    if len(password) < 8:
         return jsonify({'success': False, 'error': 'Password must be at least 6 characters long.'}), 400
 
     pwd_hash = generate_password_hash(password)
@@ -564,51 +564,49 @@ def api_auth_register():
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def api_auth_forgot_password():
     data = request.get_json() or {}
-
     email = data.get('email', '').strip().lower()
 
     if not email:
         return jsonify({
             'success': False,
-            'error': 'Please enter your email address.'
+            'error': 'Please enter your registered email address.'
         }), 400
 
     conn = get_db()
-
     user = conn.execute(
         "SELECT id, email FROM users WHERE LOWER(email) = ?",
         (email,)
     ).fetchone()
-
     conn.close()
 
     if not user:
         return jsonify({
             'success': True,
-            'message': 'If an account exists with this email, verification will be required.'
+            'requires_verification': True,
+            'message': 'If an account exists with this email, a verification code has been issued.'
         })
 
-    reset_token = secrets.token_urlsafe(32)
+    # Generate a 6-digit numeric verification code for seamless mobile & farmer entry
+    reset_code = f"{secrets.randbelow(900000) + 100000}"
     reset_expires = time.time() + (15 * 60)
 
-    session['password_reset_token'] = reset_token
+    session['password_reset_token'] = reset_code
     session['password_reset_user_id'] = user['id']
     session['password_reset_expires'] = reset_expires
     session['password_reset_verified'] = False
 
-    print("Password reset requested for account.")
-
     return jsonify({
         'success': True,
         'requires_verification': True,
-        'message': 'Verification required before creating a new password.'
+        'verification_code': reset_code,
+        'message': f'Verification code sent. (Demo code: {reset_code})'
     })
+
 
 @app.route('/api/auth/verify-reset', methods=['POST'])
 def api_auth_verify_reset():
     data = request.get_json() or {}
-
-    token = data.get('token', '').strip()
+    token = str(data.get('token', '')).strip()
 
     saved_token = session.get('password_reset_token')
     user_id = session.get('password_reset_user_id')
@@ -625,16 +623,15 @@ def api_auth_verify_reset():
         session.pop('password_reset_user_id', None)
         session.pop('password_reset_expires', None)
         session.pop('password_reset_verified', None)
-
         return jsonify({
             'success': False,
             'error': 'Reset code expired. Please request a new one.'
         }), 400
 
-    if not secrets.compare_digest(token, saved_token):
+    if not token or not secrets.compare_digest(token, str(saved_token)):
         return jsonify({
             'success': False,
-            'error': 'Invalid verification code.'
+            'error': 'Invalid verification code. Please check and try again.'
         }), 400
 
     session['password_reset_verified'] = True
@@ -648,7 +645,6 @@ def api_auth_verify_reset():
 @app.route('/api/auth/reset-password', methods=['POST'])
 def api_auth_reset_password():
     data = request.get_json() or {}
-
     new_password = data.get('new_password', '')
     confirm_password = data.get('confirm_password', '')
 
@@ -663,8 +659,10 @@ def api_auth_reset_password():
         }), 403
 
     if not expires or time.time() > expires:
-        session.clear()
-
+        session.pop('password_reset_token', None)
+        session.pop('password_reset_user_id', None)
+        session.pop('password_reset_expires', None)
+        session.pop('password_reset_verified', None)
         return jsonify({
             'success': False,
             'error': 'Reset session expired. Please start again.'
@@ -685,12 +683,10 @@ def api_auth_reset_password():
     new_hash = generate_password_hash(new_password)
 
     conn = get_db()
-
     conn.execute(
         "UPDATE users SET password_hash = ? WHERE id = ?",
         (new_hash, user_id)
     )
-
     conn.commit()
     conn.close()
 
