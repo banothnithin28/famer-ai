@@ -41,7 +41,7 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [demoCodeHint, setDemoCodeHint] = useState('');
+  const [resetToken, setResetToken] = useState('');
 
   const handleFillDemo = () => {
     setEmail('ramesh@farmer.ai');
@@ -79,7 +79,7 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setVerificationCode('');
     setNewPassword('');
     setConfirmPassword('');
-    setDemoCodeHint('');
+    setResetToken('');
     setError('');
     setSuccessMsg('');
   };
@@ -97,13 +97,10 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setSuccessMsg('');
     try {
       const data = await requestPasswordReset(cleanEmail);
-      if (data.verification_code) {
-        setDemoCodeHint(data.verification_code);
-      }
-      setSuccessMsg(data.message || 'Verification code issued. Please check below.');
+      setSuccessMsg(data.message || 'If an account exists with this email, a verification code has been sent.');
       setForgotStep('verify');
     } catch (err) {
-      setError(err.message || 'Unable to request password reset. Please verify your email.');
+      setError(err.message || "We couldn't send the verification email right now. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -117,12 +114,9 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setError('');
     try {
       const data = await requestPasswordReset(cleanEmail);
-      if (data.verification_code) {
-        setDemoCodeHint(data.verification_code);
-      }
-      setSuccessMsg(data.message || 'New verification code sent.');
+      setSuccessMsg(data.message || 'A new verification code has been sent.');
     } catch (err) {
-      setError(err.message || 'Failed to resend code.');
+      setError(err.message || "We couldn't resend the verification email right now. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -132,6 +126,7 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
   const handleVerifyCodeSubmit = async (e) => {
     e.preventDefault();
     const cleanCode = verificationCode.trim();
+    const cleanEmail = resetEmail.trim().toLowerCase();
     if (!cleanCode) {
       setError('Please enter the verification code.');
       return;
@@ -140,7 +135,10 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setError('');
     setSuccessMsg('');
     try {
-      const data = await verifyResetCode(cleanCode);
+      const data = await verifyResetCode(cleanCode, cleanEmail);
+      if (data.reset_token) {
+        setResetToken(data.reset_token);
+      }
       setSuccessMsg(data.message || 'Code verified successfully! Set your new password.');
       setForgotStep('new-password');
     } catch (err) {
@@ -169,7 +167,8 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setError('');
     setSuccessMsg('');
     try {
-      const data = await resetPassword(newPassword, confirmPassword);
+      const cleanEmail = resetEmail.trim().toLowerCase();
+      const data = await resetPassword(newPassword, confirmPassword, resetToken, cleanEmail);
       setSuccessMsg(data.message || 'Password reset successfully!');
       setForgotStep('success');
     } catch (err) {
@@ -188,6 +187,7 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setNewPassword('');
     setConfirmPassword('');
     setVerificationCode('');
+    setResetToken('');
     setError('');
     setSuccessMsg('Password updated! You can now log in.');
   };
@@ -199,6 +199,7 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
     setVerificationCode('');
     setNewPassword('');
     setConfirmPassword('');
+    setResetToken('');
     setError('');
     setSuccessMsg('');
   };
@@ -623,26 +624,11 @@ export default function LoginPage({ onLoginSuccess, onGoToRegister, onBackToLand
             ) : forgotStep === 'verify' ? (
               /* ── Step 2: Verification Code Screen ── */
               <form onSubmit={handleVerifyCodeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-                <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-subtle)', borderRadius: 12, border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  <div>Code sent to: <strong style={{ color: 'var(--text-primary)' }}>{resetEmail}</strong></div>
-                  {demoCodeHint && (
-                    <div
-                      onClick={() => setVerificationCode(demoCodeHint)}
-                      style={{
-                        cursor: 'pointer',
-                        fontSize: '0.78rem',
-                        color: 'var(--primary)',
-                        fontWeight: 800,
-                        marginTop: '0.4rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                      }}
-                      title="Click to auto-fill code"
-                    >
-                      🔑 Demo code: <code>{demoCodeHint}</code> (Click to auto-fill)
-                    </div>
-                  )}
+                <div style={{ padding: '0.85rem 1rem', background: 'var(--surface-subtle)', borderRadius: 12, border: '1px solid var(--border)', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                  <div>A 6-digit verification code has been sent to: <strong style={{ color: 'var(--text-primary)' }}>{resetEmail}</strong></div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    Please check your email inbox and spam folder. The code expires in 10 minutes.
+                  </div>
                 </div>
 
                 <div>

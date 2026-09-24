@@ -12,7 +12,7 @@
         <form action="{{ url_for('login') }}" method="POST">
             <div class="form-group">
                 <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" class="form-control" placeholder="ramesh@farmer.ai" required value="ramesh@farmer.ai">
+                <input type="email" id="email" name="email" class="form-control" placeholder="your-email@example.com" required>
             </div>
 
             <div class="form-group">
@@ -20,7 +20,7 @@
                     <label for="password">Password</label>
                     <a href="{{ url_for('forgot_password') }}" class="forgot-link" data-i18n="forgotPassword">Forgot Password?</a>
                 </div>
-                <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required value="password123">
+                <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
             </div>
 
             <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
@@ -31,12 +31,6 @@
         <p style="text-align: center; margin-top: 1.5rem; color: var(--text-secondary);">
             Don't have an account? <a href="{{ url_for('register') }}" style="color: var(--primary-color); font-weight: 600;">Register here</a>
         </p>
-
-        <div style="background: #f1f8e9; border: 1px dashed var(--primary-light); padding: 1rem; border-radius: 8px; margin-top: 1.5rem; font-size: 0.9rem;">
-            <strong>🔑 Quick Demo Credentials:</strong><br>
-            Email: <code>ramesh@farmer.ai</code><br>
-            Password: <code>password123</code>
-        </div>
     </div>
 </div>
 {% endblock %}

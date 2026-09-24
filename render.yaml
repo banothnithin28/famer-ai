@@ -17,11 +17,24 @@ services:
         value: "False"
       - key: GEMINI_MODEL
         value: gemini-2.0-flash
-        - key: GEMINI_API_KEY
-          sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USERNAME
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_USE_SSL
+        value: "False"
       # Set this at build time when the frontend is deployed separately from Flask.
       - key: VITE_API_BASE_URL
         sync: false
       # Set CORS_ALLOWED_ORIGINS to the deployed frontend origin when frontend and backend are separate.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+

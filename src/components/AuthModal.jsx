@@ -55,7 +55,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const [verificationCode, setVerificationCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [demoCodeHint, setDemoCodeHint] = useState('');
+  const [resetToken, setResetToken] = useState('');
 
   if (!isOpen) return null;
 
@@ -65,7 +65,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     setVerificationCode('');
     setNewPassword('');
     setConfirmPassword('');
-    setDemoCodeHint('');
+    setResetToken('');
     setError('');
     setSuccessMsg('');
   };
@@ -107,9 +107,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     setLoading(true); setError(''); setSuccessMsg('');
     try {
       const data = await requestPasswordReset(cleanEmail);
-      if (data.verification_code) {
-        setDemoCodeHint(data.verification_code);
-      }
       setSuccessMsg(data.message || 'Verification code sent to your email.');
       setForgotStep('verify');
     } catch (err) {
@@ -121,13 +118,17 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const handleVerifyResetCode = async (e) => {
     e.preventDefault();
     const cleanCode = verificationCode.trim();
+    const cleanEmail = email.trim().toLowerCase();
     if (!cleanCode) {
       setError('Please enter the verification code.');
       return;
     }
     setLoading(true); setError(''); setSuccessMsg('');
     try {
-      const data = await verifyResetCode(cleanCode);
+      const data = await verifyResetCode(cleanCode, cleanEmail);
+      if (data.reset_token) {
+        setResetToken(data.reset_token);
+      }
       setSuccessMsg(data.message || 'Code verified! Enter your new password.');
       setForgotStep('new-password');
     } catch (err) {
@@ -152,7 +153,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     }
     setLoading(true); setError(''); setSuccessMsg('');
     try {
-      const data = await resetPassword(newPassword, confirmPassword);
+      const cleanEmail = email.trim().toLowerCase();
+      const data = await resetPassword(newPassword, confirmPassword, resetToken, cleanEmail);
       setSuccessMsg(data.message || 'Password reset successfully!');
       setForgotStep('success');
     } catch (err) {
@@ -351,14 +353,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             <form onSubmit={handleVerifyResetCode} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               <div style={{ padding: '0.65rem 0.85rem', background: 'var(--surface-subtle)', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 Code sent to: <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>
-                {demoCodeHint && (
-                  <div
-                    onClick={() => setVerificationCode(demoCodeHint)}
-                    style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 800, marginTop: '0.3rem' }}
-                  >
-                    🔑 Demo code: <code>{demoCodeHint}</code> (Click to auto-fill)
-                  </div>
-                )}
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Please check your inbox or spam folder. The code expires in 10 minutes.
+                </div>
               </div>
               <div>
                 <label className="form-label" htmlFor="modal-verify-token">Verification Code</label>

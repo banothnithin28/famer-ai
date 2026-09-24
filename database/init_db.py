@@ -35,6 +35,13 @@ def init_db(db_path=None):
     else:
         user_id = user[0]
 
+    # Check and add last_login_at column to users if missing
+    cursor.execute("PRAGMA table_info(users)")
+    user_columns = [col[1] for col in cursor.fetchall()]
+    if 'last_login_at' not in user_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP")
+        print("[OK] Migrated users table with last_login_at column")
+
     # Check and add plant_id column to disease_scans if missing
     cursor.execute("PRAGMA table_info(disease_scans)")
     columns = [col[1] for col in cursor.fetchall()]

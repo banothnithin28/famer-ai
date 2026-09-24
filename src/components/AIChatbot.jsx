@@ -76,13 +76,13 @@ export default function AIChatbot({ plantId = null }) {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
-    } catch {
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: 'ai',
-          text: 'Farmer AI is temporarily unavailable. Please verify your connection or ask again.',
+          text: err?.message || 'Farmer AI is temporarily unavailable. Please verify your connection or ask again.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);

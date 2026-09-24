@@ -1,23 +1,44 @@
 import os
+import datetime
 import json
 import pickle
 import re
 import secrets
 import sqlite3
+import smtplib
+import hashlib
 import threading
 import time
 import warnings
+from email.message import EmailMessage
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import webbrowser
+
 import numpy as np
 from PIL import Image
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash, send_from_directory
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    redirect,
+    url_for,
+    session,
+    flash,
+    send_from_directory
+)
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+
 from google import genai
 from google.genai import types
+
 from database.init_db import init_db
 
 # Load environment variables from .env file
@@ -77,6 +98,38 @@ def weather_icon_name(weather_code):
     return 'cloudy'
 
 
+def reverse_geocode_location(latitude, longitude):
+    """
+    Reverse-geocodes latitude and longitude into human-readable city, state, country name.
+    """
+    try:
+        url = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={latitude}&longitude={longitude}&localityLanguage=en"
+        req = Request(url, headers={'User-Agent': 'FarmerAI/1.0'})
+        with urlopen(req, timeout=4) as response:
+            info = json.loads(response.read().decode('utf-8'))
+            locality = info.get('locality') or info.get('city') or info.get('principalSubdivision') or ''
+            state = info.get('principalSubdivision') or ''
+            country = info.get('countryName') or ''
+            parts = [p for p in [locality, state, country] if p]
+            formatted = []
+            for p in parts:
+                if not formatted or formatted[-1] != p:
+                    formatted.append(p)
+            return {
+                'name': ', '.join(formatted) if formatted else f"{round(latitude, 4)}°, {round(longitude, 4)}°",
+                'city': locality or 'Field Location',
+                'state': state,
+                'country': country
+            }
+    except Exception:
+        return {
+            'name': f"{round(latitude, 4)}°, {round(longitude, 4)}°",
+            'city': 'Field Location',
+            'state': '',
+            'country': ''
+        }
+
+
 def fetch_live_weather(latitude, longitude):
     cache_key = (round(latitude, 3), round(longitude, 3))
     now = time.time()
@@ -106,6 +159,8 @@ def fetch_live_weather(latitude, longitude):
     )
     with urlopen(request, timeout=12) as response:
         payload = json.loads(response.read().decode('utf-8'))
+
+    place_info = reverse_geocode_location(latitude, longitude)
 
     current = payload.get('current', {})
     hourly = payload.get('hourly', {})
@@ -138,8 +193,16 @@ def fetch_live_weather(latitude, longitude):
         })
 
     data = {
-        'location': {'latitude': latitude, 'longitude': longitude, 'timezone': payload.get('timezone')},
-        'source': 'Open-Meteo',
+        'location': {
+            'latitude': latitude,
+            'longitude': longitude,
+            'name': place_info.get('name'),
+            'city': place_info.get('city'),
+            'state': place_info.get('state'),
+            'country': place_info.get('country'),
+            'timezone': payload.get('timezone')
+        },
+        'source': 'Open-Meteo & GPS Telemetry',
         'current': {
             'temperature': current.get('temperature_2m'),
             'feels_like': current.get('apparent_temperature'),
@@ -164,38 +227,79 @@ def fetch_live_weather(latitude, longitude):
 
 # Configure Gemini (new google-genai SDK)
 _GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-_GEMINI_MODEL   = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
-_FARMING_SYSTEM_PROMPT = """You are Farmer AI Assistant, a calm and practical agricultural helper for farmers.
+_PRIMARY_GEMINI_MODEL = (os.getenv('GEMINI_MODEL') or 'gemini-3.5-flash-lite').strip()
+_CANDIDATE_GEMINI_MODELS = list(dict.fromkeys([
+    _PRIMARY_GEMINI_MODEL,
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-3.5-flash',
+]))
 
-Rules:
-1. Answer the exact question in simple, practical language. Use short sentences and short lists.
-2. Treat scan results as possible AI predictions, never confirmed diagnoses.
-3. Never interpret model confidence as disease severity. Say confidence changed, not that disease became worse.
-4. Use only the supplied context. If a value is unavailable, say it is unavailable.
-5. Do not invent weather, soil moisture, disease details, dates, or pesticide doses.
-6. Give general care guidance. For serious crop loss or uncertain cases, recommend a local agricultural expert.
-7. For chemical advice, avoid exact doses unless the farmer supplies a verified product label and crop context.
-8. Keep normal answers to 2-5 sentences unless a list is needed.
+_FARMING_SYSTEM_PROMPT = """You are Farmer AI, an agricultural assistant designed to help farmers.
+
+Answer the farmer's actual question directly and clearly.
+
+You can help with:
+* crops
+* crop selection
+* crop diseases
+* plant health
+* pests
+* fertilizers
+* urea
+* irrigation
+* soil
+* weather
+* farming practices
+* government agricultural schemes
+* farming knowledge
+* agricultural technology
+* market information
+* farm management
+
+Use simple language that farmers can understand.
+If the farmer asks a general question, answer the question directly.
+If the farmer asks about fertilizer, explain the fertilizer rather than talking about irrigation.
+If the farmer asks about a disease, discuss the disease rather than giving generic weather advice.
+If the farmer asks about weather, use the available weather information if provided.
+If the farmer asks about current prices, current government schemes, or other time-sensitive information, do not invent values. Explain that current information should be verified from a reliable/current source (e.g. local Mandi, e-NAM, or local Agriculture Department/KVK). If verified reference guidelines below apply, provide them as approximate reference figures.
+If the farmer provides crop, location, or symptoms, use those details in the answer.
+Do not repeatedly ask the farmer to provide crop, location, symptoms, and weather when those details are not necessary.
+Be conversational, respectful, and helpful.
+Never answer an unrelated question with a generic irrigation response.
 
 LANGUAGE RULES:
-- If the user writes in Telugu → reply ONLY in Telugu.
-- If the user writes in Hindi → reply ONLY in Hindi.
-- Otherwise → reply in English.
+- If the farmer asks or writes in Telugu, reply in Telugu.
+- If the farmer asks or writes in Hindi, reply in Hindi.
+- If the farmer asks or writes in Tamil, reply in Tamil.
+- Otherwise, reply in English.
 
-KNOWN INDIAN FERTILIZER PRICES (approximate, as of 2025):
-- Urea (45 kg bag): ₹266.50 (government subsidized MRP). Per kg ≈ ₹5.9.
-- DAP (Diammonium Phosphate, 50 kg): ₹1,350 (subsidized). Per kg ≈ ₹27.
-- MOP (Muriate of Potash, 50 kg): ₹1,700 (approx). Per kg ≈ ₹34.
-- NPK 10:26:26 (50 kg): ₹1,470 (approx).
-- SSP (Single Super Phosphate, 50 kg): ₹400–₹450 (approx).
-- Neem-coated Urea (45 kg): ₹266.50 (same as urea, mandatory coating).
+REFERENCE INDIAN FERTILIZER PRICING (Official Government subsidized MRP guidelines):
+- Neem-Coated Urea (45 kg bag): ₹266.50 (statutorily fixed MRP across India by the Central Government). Per kg ≈ ₹5.92.
+- DAP (Diammonium Phosphate, 50 kg bag): ~₹1,350 (subsidized MRP).
+- MOP (Muriate of Potash, 50 kg bag): ~₹1,650–₹1,750 (subsidized).
+- NPK Complex Fertilizers (50 kg bag): ~₹1,400–₹1,500.
+Always clarify that retail prices at local cooperative societies (PACS) or private dealers are subject to statutory MRP and local taxes.
+
+GOVERNMENT AGRICULTURAL SCHEMES REFERENCE (India / Telangana):
+- PM-KISAN: ₹6,000/year in 3 equal installments of ₹2,000 directly to farmer bank accounts.
+- PM Fasal Bima Yojana (PMFBY): Crop insurance for non-preventable natural risks at nominal premium (2% Kharif, 1.5% Rabi).
+- Rythu Bharosa / Rythu Bandhu (Telangana): Direct farmer investment support per acre per season.
+- Soil Health Card Scheme: Periodic soil testing for N, P, K, micronutrients and organic carbon.
+- PM Krishi Sinchayee Yojana (PMKSY): Subsidies for micro-irrigation (drip and sprinkler systems).
 """
+
 if _GEMINI_API_KEY:
-    gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
-    print(f"[OK] Gemini AI chatbot initialized ({_GEMINI_MODEL})")
+    try:
+        gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
+        print(f"[OK] Gemini AI chatbot initialized (primary: {_PRIMARY_GEMINI_MODEL}, fallbacks: {_CANDIDATE_GEMINI_MODELS})")
+    except Exception as _e:
+        gemini_client = None
+        print(f"[WARN] Failed to initialize Gemini client: {_e}")
 else:
     gemini_client = None
-    print("[WARN] GEMINI_API_KEY not set — chatbot will use fallback mode")
+    print("[WARN] GEMINI_API_KEY not set — chatbot will report service unavailable")
+
 
 chat_rate_limit = {}
 chat_rate_limit_lock = threading.Lock()
@@ -262,12 +366,95 @@ def serialize_scan(scan):
     item['symptoms'] = item.get('symptoms') or ''
     return item
 
-# Session User Helper
+# Session & Security Helpers
+def record_login_session(user_id):
+    """
+    Creates an active user session record in user_sessions table and updates users.last_login_at.
+    Stores the session token in the client cookie and its SHA-256 hash in the database.
+    """
+    session_token = secrets.token_hex(32)
+    token_hash = hashlib.sha256(session_token.encode('utf-8')).hexdigest()
+    expires_at = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+
+    ip_addr = request.headers.get('X-Forwarded-For', request.remote_addr or '')
+    if ',' in ip_addr:
+        ip_addr = ip_addr.split(',')[0].strip()
+    user_agent = (request.headers.get('User-Agent') or '')[:255]
+
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO user_sessions (user_id, session_token_hash, ip_address, user_agent, expires_at)
+           VALUES (?, ?, ?, ?, ?)""",
+        (user_id, token_hash, ip_addr, user_agent, expires_at)
+    )
+    conn.execute(
+        "UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (user_id,)
+    )
+    conn.commit()
+    conn.close()
+
+    session['session_token'] = session_token
+    return session_token
+
+
+def revoke_current_session():
+    """Revokes the current user's session record and clears the cookie session."""
+    session_token = session.get('session_token')
+    if session_token:
+        token_hash = hashlib.sha256(session_token.encode('utf-8')).hexdigest()
+        conn = get_db()
+        conn.execute(
+            "UPDATE user_sessions SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE session_token_hash = ?",
+            (token_hash,)
+        )
+        conn.commit()
+        conn.close()
+    session.clear()
+
+
+def revoke_all_user_sessions(user_id):
+    """Revokes all active sessions for a user (e.g., upon password reset)."""
+    conn = get_db()
+    conn.execute(
+        "UPDATE user_sessions SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_active = 1",
+        (user_id,)
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_current_user():
     user_id = session.get('user_id')
     if not user_id:
         return None
+
+    session_token = session.get('session_token')
     conn = get_db()
+
+    if session_token:
+        token_hash = hashlib.sha256(session_token.encode('utf-8')).hexdigest()
+        sess_record = conn.execute(
+            "SELECT id, expires_at, is_active FROM user_sessions WHERE session_token_hash = ? AND user_id = ? AND is_active = 1",
+            (token_hash, user_id)
+        ).fetchone()
+
+        if not sess_record:
+            conn.close()
+            session.clear()
+            return None
+
+        now_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+        if sess_record['expires_at'] < now_str:
+            conn.execute("UPDATE user_sessions SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE id = ?", (sess_record['id'],))
+            conn.commit()
+            conn.close()
+            session.clear()
+            return None
+
+        conn.execute("UPDATE user_sessions SET last_activity_at = CURRENT_TIMESTAMP WHERE id = ?", (sess_record['id'],))
+        conn.commit()
+
     user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
     return dict(user) if user else None
@@ -310,72 +497,51 @@ def send_upload(filename):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
 
         conn = get_db()
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        user = conn.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email,)).fetchone()
         conn.close()
 
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
             session['user_name'] = user['name']
             session['user_lang'] = user['language']
+            record_login_session(user['id'])
             flash(f"Welcome back, {user['name']}!", "success")
             return redirect(url_for('dashboard'))
         else:
-            flash("Invalid email or password. Try demo: ramesh@farmer.ai / password123", "error")
+            flash("Invalid email or password.", "error")
 
     dist_index = os.path.join(app.root_path, 'dist', 'index.html')
     if os.path.exists(dist_index):
         return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
     return render_template('login.html')
 
-@app.route('/forgot-password', methods=['GET', 'POST'])
+@app.route('/forgot-password', methods=['GET'])
 def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        new_password = request.form.get('new_password', '')
-        confirm_password = request.form.get('confirm_password', '')
-
-        if not email or not new_password or not confirm_password:
-            flash("Please fill in all fields.", "error")
-            return render_template('forgot_password.html', email=email)
-
-        if len(new_password) < 6:
-            flash("Password must be at least 6 characters long.", "error")
-            return render_template('forgot_password.html', email=email)
-
-        if new_password != confirm_password:
-            flash("Passwords do not match. Please verify and try again.", "error")
-            return render_template('forgot_password.html', email=email)
-
-        conn = get_db()
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-
-        if not user:
-            conn.close()
-            flash("No farmer account found with that email address. Please check your email or register.", "error")
-            return render_template('forgot_password.html', email=email)
-
-        new_hash = generate_password_hash(new_password)
-        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user['id']))
-        conn.commit()
-        conn.close()
-
-        flash("Password updated successfully! You can now log in with your new password.", "success")
-        return redirect(url_for('login'))
-
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
     return render_template('forgot_password.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
         location = request.form.get('location', 'Telangana')
         language = request.form.get('language', 'en')
+
+        if not name or not email or not password:
+            flash("Please fill in all required fields.", "error")
+            return render_template('register.html')
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return render_template('register.html')
 
         pwd_hash = generate_password_hash(password)
         conn = get_db()
@@ -388,17 +554,18 @@ def register():
             )
             user_id = cursor.lastrowid
             cursor.execute(
-                "INSERT INTO farmer_profiles (user_id, farm_size_acres, soil_type, primary_crop) VALUES (?, ?, ?, ?)",
-                (user_id, 5.0, "Black", "Cotton")
+                "INSERT INTO farmer_profiles (user_id, farm_size_acres, soil_type, primary_crop) VALUES (?, 5.0, 'Black', 'Cotton')",
+                (user_id,)
             )
             conn.commit()
             session['user_id'] = user_id
             session['user_name'] = name
             session['user_lang'] = language
+            record_login_session(user_id)
             flash("Registration successful! Welcome to Farmer AI.", "success")
             return redirect(url_for('dashboard'))
         except sqlite3.IntegrityError:
-            flash("Email already registered. Please login.", "error")
+            flash("An account with this email already exists. Please log in.", "error")
         finally:
             conn.close()
 
@@ -409,7 +576,7 @@ def register():
 
 @app.route('/logout')
 def logout():
-    session.clear()
+    revoke_current_session()
     flash("You have logged out safely.", "info")
     return redirect(url_for('index'))
 
@@ -488,13 +655,15 @@ def api_auth_login():
         return jsonify({'success': False, 'error': 'Email and password are required.'}), 400
 
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email,)).fetchone()
     conn.close()
 
     if user and check_password_hash(user['password_hash'], password):
         session['user_id'] = user['id']
         session['user_name'] = user['name']
         session['user_lang'] = user['language']
+        record_login_session(user['id'])
+
         return jsonify({
             'success': True,
             'user': {
@@ -507,13 +676,14 @@ def api_auth_login():
             'message': f"Welcome back, {user['name']}!"
         })
     else:
-        return jsonify({'success': False, 'error': 'Invalid email or password. Try demo: ramesh@farmer.ai / password123'}), 401
+        return jsonify({'success': False, 'error': 'Invalid email or password.'}), 401
+
 
 @app.route('/api/auth/register', methods=['POST'])
 def api_auth_register():
     data = request.get_json() or {}
     name = data.get('name', '').strip()
-    email = data.get('email', '').strip()
+    email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     location = data.get('location', 'Telangana')
     language = data.get('language', 'en')
@@ -525,7 +695,7 @@ def api_auth_register():
         return jsonify({'success': False, 'error': 'Name, email, and password are required.'}), 400
 
     if len(password) < 8:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters long.'}), 400
+        return jsonify({'success': False, 'error': 'Password must be at least 8 characters long.'}), 400
 
     pwd_hash = generate_password_hash(password)
     conn = get_db()
@@ -544,6 +714,7 @@ def api_auth_register():
         session['user_id'] = user_id
         session['user_name'] = name
         session['user_lang'] = language
+        record_login_session(user_id)
 
         return jsonify({
             'success': True,
@@ -561,6 +732,116 @@ def api_auth_register():
     finally:
         conn.close()
 
+
+def send_password_reset_email(to_email, otp):
+    """
+    Sends a secure 6-digit OTP email to the user for password reset.
+    Configured via environment variables:
+      - EMAIL_HOST (e.g. smtp.gmail.com)
+      - EMAIL_PORT (e.g. 587 or 465)
+      - EMAIL_USERNAME (e.g. your-email@gmail.com)
+      - EMAIL_PASSWORD (e.g. 16-character Gmail App Password)
+      - EMAIL_FROM (optional, defaults to EMAIL_USERNAME)
+      - EMAIL_USE_SSL (optional, 'True' for port 465 SSL, otherwise STARTTLS on 587)
+    """
+    host = os.getenv('EMAIL_HOST', '').strip()
+    port_str = os.getenv('EMAIL_PORT', '587').strip()
+    username = os.getenv('EMAIL_USERNAME', '').strip()
+    password = os.getenv('EMAIL_PASSWORD', '').strip()
+    if 'gmail' in host.lower():
+        password = password.replace(' ', '')
+    sender = os.getenv('EMAIL_FROM', '').strip() or username
+
+    if not host or not username or not password:
+        app.logger.warning("SMTP credentials incomplete. Please configure EMAIL_HOST, EMAIL_USERNAME, and EMAIL_PASSWORD.")
+        raise RuntimeError("SMTP email service is not configured on this server.")
+
+    try:
+        port = int(port_str)
+    except ValueError:
+        port = 587
+
+    subject = "Farmer AI - Password Reset Verification Code"
+
+    text_content = f"""Farmer AI - Crop Intelligence Platform
+
+Password Reset Verification
+
+Your Farmer AI verification code is:
+{otp}
+
+This code expires in 10 minutes.
+
+If you did not request a password reset, you can safely ignore this email. Your farm account remains secure.
+"""
+
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f4; margin: 0; padding: 20px; }}
+    .container {{ max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e0e6e0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
+    .header {{ background: linear-gradient(135deg, #2e7d32, #1b5e20); color: #ffffff; padding: 24px; text-align: center; }}
+    .content {{ padding: 28px 24px; color: #2d3748; line-height: 1.6; }}
+    .otp-box {{ background: #e8f5e9; border: 2px dashed #4caf50; border-radius: 10px; text-align: center; padding: 18px; margin: 24px 0; }}
+    .otp-code {{ font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #1b5e20; font-family: monospace; }}
+    .footer {{ font-size: 12px; color: #718096; text-align: center; padding: 16px; border-top: 1px solid #edf2f7; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 style="margin: 0; font-size: 22px;">🌱 Farmer AI</h1>
+      <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.9;">Smart Agriculture & Crop Intelligence</p>
+    </div>
+    <div class="content">
+      <h2 style="font-size: 18px; color: #1a202c; margin-top: 0;">Password Reset Verification</h2>
+      <p>We received a request to reset the password for your Farmer AI account. Enter the verification code below to proceed:</p>
+
+      <div class="otp-box">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #2e7d32; margin-bottom: 6px; font-weight: 700;">Your Verification Code</div>
+        <div class="otp-code">{otp}</div>
+      </div>
+
+      <p style="font-size: 13px; color: #4a5568;">⏱️ This verification code <strong>expires in 10 minutes</strong>.</p>
+      <p style="font-size: 13px; color: #718096; margin-bottom: 0;">If you did not request a password reset, please ignore this email. Your farm account remains secure.</p>
+    </div>
+    <div class="footer">
+      © {time.strftime('%Y')} Farmer AI Platform • Designed for Farmers
+    </div>
+  </div>
+</body>
+</html>"""
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = f"Farmer AI <{sender}>"
+    msg['To'] = to_email
+
+    msg.attach(MIMEText(text_content, 'plain', 'utf-8'))
+    msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+
+    use_ssl = (os.getenv('EMAIL_USE_SSL', '').strip().lower() in ('true', '1', 'yes')) or port == 465
+
+    if use_ssl:
+        server = smtplib.SMTP_SSL(host, port, timeout=15)
+    else:
+        server = smtplib.SMTP(host, port, timeout=15)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+
+    try:
+        server.login(username, password)
+        server.sendmail(sender, [to_email], msg.as_string())
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
+
+
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def api_auth_forgot_password():
     data = request.get_json() or {}
@@ -574,32 +855,84 @@ def api_auth_forgot_password():
 
     conn = get_db()
     user = conn.execute(
-        "SELECT id, email FROM users WHERE LOWER(email) = ?",
+        "SELECT id, name, email FROM users WHERE LOWER(email) = ?",
         (email,)
     ).fetchone()
-    conn.close()
 
     if not user:
+        conn.close()
         return jsonify({
-            'success': True,
-            'requires_verification': True,
-            'message': 'If an account exists with this email, a verification code has been issued.'
-        })
+            'success': False,
+            'error': 'No account found with this email address. Please check your email or register.'
+        }), 404
 
-    # Generate a 6-digit numeric verification code for seamless mobile & farmer entry
-    reset_code = f"{secrets.randbelow(900000) + 100000}"
-    reset_expires = time.time() + (15 * 60)
+    # Enforce resend cooldown (60 seconds)
+    recent_otp = conn.execute(
+        """SELECT id, strftime('%s', 'now') - strftime('%s', created_at) AS elapsed
+           FROM password_reset_otps
+           WHERE user_id = ? AND is_used = 0
+           ORDER BY id DESC LIMIT 1""",
+        (user['id'],)
+    ).fetchone()
 
-    session['password_reset_token'] = reset_code
-    session['password_reset_user_id'] = user['id']
-    session['password_reset_expires'] = reset_expires
-    session['password_reset_verified'] = False
+    OTP_COOLDOWN_SECONDS = 60
+    if recent_otp and recent_otp['elapsed'] is not None and recent_otp['elapsed'] < OTP_COOLDOWN_SECONDS:
+        remaining = OTP_COOLDOWN_SECONDS - int(recent_otp['elapsed'])
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Please wait {remaining} seconds before requesting a new verification code.'
+        }), 429
 
+    # Generate a cryptographically secure random 6-digit numeric OTP
+    otp = f"{secrets.randbelow(900000) + 100000}"
+    # Securely hash OTP before storing in database (never store plain OTP)
+    otp_hash = generate_password_hash(otp)
+
+    # Expiry: 10 minutes in UTC
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    otp_expires_at = (now_utc + datetime.timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
+
+    # Send real OTP to registered email
+    try:
+        send_password_reset_email(user['email'], otp)
+    except RuntimeError as re_err:
+        conn.close()
+        app.logger.warning("SMTP email service not configured: %s", str(re_err))
+        return jsonify({
+            'success': False,
+            'error': 'Email delivery service is not configured on this server. Please set SMTP environment variables in .env.'
+        }), 503
+    except Exception:
+        conn.close()
+        app.logger.exception("Failed to deliver password reset email")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to deliver verification email. Please check your email address or try again later.'
+        }), 500
+
+    # Invalidate any previous unused OTPs for this user
+    conn.execute(
+        "UPDATE password_reset_otps SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_used = 0",
+        (user['id'],)
+    )
+
+    # Store hashed OTP record in database
+    conn.execute(
+        """INSERT INTO password_reset_otps
+           (user_id, email, otp_hash, expires_at, verification_attempts, max_attempts, is_used)
+           VALUES (?, ?, ?, ?, 0, 5, 0)""",
+        (user['id'], user['email'], otp_hash, otp_expires_at)
+    )
+    conn.commit()
+    conn.close()
+
+    session['reset_email'] = user['email']
+
+    # Response NEVER contains the OTP
     return jsonify({
         'success': True,
-        'requires_verification': True,
-        'verification_code': reset_code,
-        'message': f'Verification code sent. (Demo code: {reset_code})'
+        'message': f"A 6-digit verification code has been sent to {user['email']}."
     })
 
 
@@ -607,38 +940,116 @@ def api_auth_forgot_password():
 def api_auth_verify_reset():
     data = request.get_json() or {}
     token = str(data.get('token', '')).strip()
+    email = str(data.get('email', '')).strip().lower() or session.get('reset_email', '').strip().lower()
 
-    saved_token = session.get('password_reset_token')
-    user_id = session.get('password_reset_user_id')
-    expires = session.get('password_reset_expires')
-
-    if not saved_token or not user_id or not expires:
+    if not email:
         return jsonify({
             'success': False,
-            'error': 'Password reset session expired. Please start again.'
+            'error': 'Email address is required for verification.'
         }), 400
 
-    if time.time() > expires:
-        session.pop('password_reset_token', None)
-        session.pop('password_reset_user_id', None)
-        session.pop('password_reset_expires', None)
-        session.pop('password_reset_verified', None)
+    if not token:
         return jsonify({
             'success': False,
-            'error': 'Reset code expired. Please request a new one.'
+            'error': 'Please enter the 6-digit verification code.'
         }), 400
 
-    if not token or not secrets.compare_digest(token, str(saved_token)):
+    if not token.isdigit() or len(token) != 6:
         return jsonify({
             'success': False,
-            'error': 'Invalid verification code. Please check and try again.'
+            'error': 'Verification code must be a 6-digit number.'
         }), 400
 
-    session['password_reset_verified'] = True
+    conn = get_db()
+    record = conn.execute(
+        """SELECT * FROM password_reset_otps
+           WHERE LOWER(email) = ? AND is_used = 0 AND reset_token_hash IS NULL
+           ORDER BY id DESC LIMIT 1""",
+        (email,)
+    ).fetchone()
+
+    if not record:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'No active verification request found. Please request a new code.'
+        }), 400
+
+    # Check attempt limit
+    if record['verification_attempts'] >= record['max_attempts']:
+        conn.execute(
+            "UPDATE password_reset_otps SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (record['id'],)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Maximum verification attempts exceeded. This code is invalidated. Please request a new code.'
+        }), 400
+
+    # Check expiration
+    now_utc = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    if record['expires_at'] < now_utc:
+        conn.execute(
+            "UPDATE password_reset_otps SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (record['id'],)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Verification code has expired. Please request a new one.'
+        }), 400
+
+    # Verify OTP securely against stored hash
+    if not check_password_hash(record['otp_hash'], token):
+        new_attempts = record['verification_attempts'] + 1
+        remaining = record['max_attempts'] - new_attempts
+        if remaining <= 0:
+            conn.execute(
+                "UPDATE password_reset_otps SET verification_attempts = ?, is_used = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_attempts, record['id'])
+            )
+            conn.commit()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Maximum verification attempts exceeded. Please request a new code.'
+            }), 400
+        else:
+            conn.execute(
+                "UPDATE password_reset_otps SET verification_attempts = ? WHERE id = ?",
+                (new_attempts, record['id'])
+            )
+            conn.commit()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Invalid verification code. You have {remaining} attempt(s) remaining.'
+            }), 400
+
+    # OTP is verified! Generate a short-lived cryptographically secure reset authorization token
+    reset_token = secrets.token_urlsafe(32)
+    reset_token_hash = hashlib.sha256(reset_token.encode('utf-8')).hexdigest()
+    reset_token_expires = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
+
+    conn.execute(
+        """UPDATE password_reset_otps
+           SET reset_token_hash = ?, reset_token_expires_at = ?
+           WHERE id = ?""",
+        (reset_token_hash, reset_token_expires, record['id'])
+    )
+    conn.commit()
+    conn.close()
+
+    session['reset_token'] = reset_token
+    session['reset_email'] = email
 
     return jsonify({
         'success': True,
-        'message': 'Verification successful. You can now create a new password.'
+        'reset_token': reset_token,
+        'message': 'Code verified successfully! You can now choose a new password.'
     })
 
 
@@ -647,57 +1058,84 @@ def api_auth_reset_password():
     data = request.get_json() or {}
     new_password = data.get('new_password', '')
     confirm_password = data.get('confirm_password', '')
+    reset_token = data.get('reset_token', '').strip() or session.get('reset_token', '').strip()
+    email = data.get('email', '').strip().lower() or session.get('reset_email', '').strip().lower()
 
-    user_id = session.get('password_reset_user_id')
-    verified = session.get('password_reset_verified')
-    expires = session.get('password_reset_expires')
-
-    if not user_id or not verified:
+    if not reset_token or not email:
         return jsonify({
             'success': False,
-            'error': 'Please verify your reset request first.'
+            'error': 'Reset authorization is missing. Please verify your reset code first.'
         }), 403
-
-    if not expires or time.time() > expires:
-        session.pop('password_reset_token', None)
-        session.pop('password_reset_user_id', None)
-        session.pop('password_reset_expires', None)
-        session.pop('password_reset_verified', None)
-        return jsonify({
-            'success': False,
-            'error': 'Reset session expired. Please start again.'
-        }), 400
 
     if len(new_password) < 8:
         return jsonify({
             'success': False,
-            'error': 'Password must be at least 8 characters long.'
+            'error': 'New password must be at least 8 characters long.'
         }), 400
 
     if new_password != confirm_password:
         return jsonify({
             'success': False,
-            'error': 'Passwords do not match.'
+            'error': 'New password and confirmation do not match.'
+        }), 400
+
+    token_hash = hashlib.sha256(reset_token.encode('utf-8')).hexdigest()
+    conn = get_db()
+    record = conn.execute(
+        """SELECT * FROM password_reset_otps
+           WHERE LOWER(email) = ? AND reset_token_hash = ? AND is_used = 0
+           ORDER BY id DESC LIMIT 1""",
+        (email, token_hash)
+    ).fetchone()
+
+    if not record:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Invalid or expired password reset authorization. Please restart verification.'
+        }), 400
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    if not record['reset_token_expires_at'] or record['reset_token_expires_at'] < now_utc:
+        conn.execute(
+            "UPDATE password_reset_otps SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (record['id'],)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Password reset authorization has expired. Please request a new code.'
         }), 400
 
     new_hash = generate_password_hash(new_password)
 
-    conn = get_db()
+    # Update password
     conn.execute(
         "UPDATE users SET password_hash = ? WHERE id = ?",
-        (new_hash, user_id)
+        (new_hash, record['user_id'])
+    )
+
+    # Invalidate OTP and reset authorization
+    conn.execute(
+        "UPDATE password_reset_otps SET is_used = 1, used_at = CURRENT_TIMESTAMP, reset_token_hash = NULL WHERE id = ?",
+        (record['id'],)
+    )
+
+    # Invalidate all active user sessions so previous sessions cannot be used
+    conn.execute(
+        "UPDATE user_sessions SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_active = 1",
+        (record['user_id'],)
     )
     conn.commit()
     conn.close()
 
-    session.pop('password_reset_token', None)
-    session.pop('password_reset_user_id', None)
-    session.pop('password_reset_expires', None)
-    session.pop('password_reset_verified', None)
+    session.pop('reset_token', None)
+    session.pop('reset_email', None)
 
     return jsonify({
         'success': True,
-        'message': 'Password changed successfully. You can now log in.'
+        'message': 'Password has been reset successfully. You can now log in with your new password.'
     })
 
     
@@ -725,7 +1163,7 @@ def api_auth_me():
 
 @app.route('/api/auth/logout', methods=['POST'])
 def api_auth_logout():
-    session.clear()
+    revoke_current_session()
     return jsonify({'success': True, 'message': 'Logged out successfully.'})
 
 @app.route('/api/dashboard/summary', methods=['GET'])
@@ -1463,48 +1901,112 @@ def api_decision_score():
 
 
 # 5. AI Chatbot API (powered by Google Gemini)
-def fallback_farmer_reply(message):
-    message_lower = message.lower()
-    if message_lower in ('hi', 'hello', 'hey'):
-        return 'Namaste! How can I help with your crop today?'
-    if 'water' in message_lower or 'irrigation' in message_lower:
-        return 'Check the latest rain forecast and your soil before watering. If rain is expected soon, extra irrigation may not be needed.'
-    if 'disease' in message_lower or 'blight' in message_lower or 'fungus' in message_lower:
-        return 'A scan can show a possible disease, but it is not a confirmed diagnosis. Remove badly affected leaves, monitor new growth, and consult a local agricultural expert if symptoms spread.'
-    if any(term in message_lower for term in ('pest', 'insect', 'worm', 'caterpillar', 'aphid', 'whitefly', 'thrip', 'mite', 'borer')):
-        return 'For pest control, inspect the underside of leaves, remove heavily affected plant parts, and use neem-based treatment according to the product label. Avoid spraying during flowering when pollinators are active, and consult your local agricultural expert before using chemical pesticides.'
-    if any(term in message_lower for term in ('fertilizer', 'urea', 'dap', 'mop', 'npk', 'nutrient', 'manure', 'compost')):
-        return 'Use a soil test before choosing fertilizer. Apply well-decomposed organic manure during field preparation, and split nitrogen applications rather than applying all urea at once. Follow the crop-specific dose on the label or from your local KVK.'
-    if any(term in message_lower for term in ('suggest', 'recommend', 'which crop', 'what crop', 'grow', 'sow', 'cultivate')):
-        return 'Crop choice depends on your soil, season, water availability, and local market. A soil test and advice from your nearest KVK can identify the best crop and variety for your field.'
-    if any(term in message_lower for term in ('price', 'mandi', 'market', 'sell', 'profit', 'rate', 'income')):
-        return 'Compare current prices at nearby mandis and e-NAM before selling. Keep harvested produce clean and dry, and ask your local Farmer Producer Organization about collective selling options.'
-    return 'I can help with watering, crop diseases, pests, fertilizer, crop selection, and market planning. Please include your crop, location, symptoms, and recent weather for more specific advice.'
-
-
 def build_farmer_context(user, plant_id, latitude, longitude):
-    context = {'plant': None, 'scans': [], 'weather': None}
-    if plant_id and user:
+    """
+    Gathers helpful farm and farmer context for Gemini without exposing sensitive credentials.
+    """
+    context = {}
+    if user:
         conn = get_db()
-        plant = conn.execute(
-            "SELECT id, crop_name, field_name, location, notes, created_at FROM plants WHERE id = ? AND user_id = ?",
-            (plant_id, user['id'])
+        context['farmer_name'] = user['name']
+        context['farmer_location'] = user['location']
+        profile = conn.execute(
+            "SELECT farm_size_acres, soil_type, primary_crop FROM farmer_profiles WHERE user_id = ?",
+            (user['id'],)
         ).fetchone()
-        if plant:
-            scans = conn.execute(
-                "SELECT id, disease_name, confidence, severity, symptoms, created_at FROM disease_scans WHERE plant_id = ? AND user_id = ? ORDER BY datetime(created_at) DESC, id DESC LIMIT 5",
+        if profile:
+            if profile['farm_size_acres']:
+                context['farm_size_acres'] = profile['farm_size_acres']
+            if profile['soil_type']:
+                context['soil_type'] = profile['soil_type']
+            if profile['primary_crop']:
+                context['primary_crop'] = profile['primary_crop']
+
+        user_plants = conn.execute(
+            "SELECT crop_name, field_name, location FROM plants WHERE user_id = ? LIMIT 5",
+            (user['id'],)
+        ).fetchall()
+        if user_plants:
+            context['registered_crops'] = [dict(p) for p in user_plants]
+
+        if plant_id:
+            plant = conn.execute(
+                "SELECT id, crop_name, field_name, location, notes FROM plants WHERE id = ? AND user_id = ?",
                 (plant_id, user['id'])
-            ).fetchall()
-            context['plant'] = dict(plant)
-            context['scans'] = [dict(scan) for scan in scans]
+            ).fetchone()
+            if plant:
+                context['selected_plant'] = dict(plant)
+                scans = conn.execute(
+                    "SELECT disease_name, confidence, severity, symptoms, created_at FROM disease_scans WHERE plant_id = ? AND user_id = ? ORDER BY id DESC LIMIT 3",
+                    (plant_id, user['id'])
+                ).fetchall()
+                if scans:
+                    context['recent_scans'] = [dict(s) for s in scans]
+        else:
+            recent_scan = conn.execute(
+                "SELECT disease_name, confidence, severity, symptoms, created_at FROM disease_scans WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+                (user['id'],)
+            ).fetchone()
+            if recent_scan:
+                context['latest_disease_scan'] = dict(recent_scan)
         conn.close()
 
     if latitude is not None and longitude is not None:
         try:
-            context['weather'] = fetch_live_weather(float(latitude), float(longitude))
-        except (TypeError, ValueError, Exception):
-            context['weather'] = None
+            weather = fetch_live_weather(float(latitude), float(longitude))
+            if weather and weather.get('current'):
+                curr = weather['current']
+                context['live_weather'] = {
+                    'temperature': f"{curr.get('temperature')}°C",
+                    'humidity': f"{curr.get('humidity')}%",
+                    'condition': curr.get('condition'),
+                    'rain': f"{curr.get('rain', 0)} mm"
+                }
+        except Exception:
+            pass
+
     return context
+
+
+def format_gemini_contents(history, current_message):
+    """
+    Formats multi-turn conversation history into valid types.Content turns for Google GenAI SDK.
+    Ensures:
+      - Valid alternating sequence of user and model turns.
+      - First turn is user.
+      - Last turn is user with the current farmer question.
+      - Limits history to recent reasonable turns (last 6 messages).
+    """
+    contents = []
+
+    if isinstance(history, list):
+        recent = history[-6:]
+        last_role = None
+        for item in recent:
+            if not isinstance(item, dict):
+                continue
+            role = item.get('role', 'user')
+            role = 'model' if role in ('assistant', 'model', 'ai', 'bot') else 'user'
+            text = str(item.get('text') or item.get('content') or '').strip()
+
+            if not text:
+                continue
+            # Skip initial bot greeting if it appears before any user question
+            if len(contents) == 0 and role == 'model':
+                continue
+            if role == last_role:
+                continue
+
+            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=text)]))
+            last_role = role
+
+    # Ensure last role before current_message is not 'user' so current_message adds as 'user'
+    if contents and contents[-1].role == 'user':
+        contents.pop()
+
+    # Append the farmer's actual current question
+    contents.append(types.Content(role='user', parts=[types.Part.from_text(text=current_message)]))
+    return contents
 
 
 def chat_response(data):
@@ -1530,34 +2032,64 @@ def chat_response(data):
         plant_id = int(plant_id) if plant_id else None
     except (TypeError, ValueError):
         plant_id = None
+
     context = build_farmer_context(user, plant_id, data.get('latitude'), data.get('longitude'))
-    language_names = {'en': 'English', 'te': 'simple Telugu', 'hi': 'simple Hindi', 'ta': 'simple Tamil'}
-    selected_language = language_names.get(language, 'English')
-    context_prompt = (
-        f"Farmer question:\n{message}\n\n"
-        f"Reply in {selected_language}.\n\n"
-        f"Verified context (say unavailable when absent; do not infer missing values):\n"
-        f"{json.dumps(context, ensure_ascii=False, default=str)}"
-    )
+
+    system_instruction = _FARMING_SYSTEM_PROMPT
+    if context:
+        clean_context_str = json.dumps(context, ensure_ascii=False, indent=2, default=str)
+        system_instruction += f"\n\nVERIFIED APPLICATION CONTEXT (Grounding data about the farmer/farm — use only when relevant):\n{clean_context_str}"
+
+    if language and language != 'en':
+        lang_map = {'te': 'Telugu', 'hi': 'Hindi', 'ta': 'Tamil'}
+        if language in lang_map:
+            system_instruction += f"\n\nCRITICAL LANGUAGE INSTRUCTION: The farmer has selected {lang_map[language]}. Please respond in {lang_map[language]}."
+
+    reply = None
+    last_error = None
 
     if gemini_client:
-        try:
-            response = gemini_client.models.generate_content(
-                model=_GEMINI_MODEL,
-                contents=context_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=_FARMING_SYSTEM_PROMPT,
-                    max_output_tokens=512,
-                    temperature=0.4,
-                )
-            )
-            reply = (response.text or '').strip()
-            if reply:
-                return jsonify({'success': True, 'reply': reply, 'powered_by': 'gemini'})
-        except Exception:
-            app.logger.warning('Gemini API request failed')
+        contents = format_gemini_contents(data.get('history', []), message)
+        gen_config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            max_output_tokens=700,
+            temperature=0.4,
+        )
 
-    return jsonify({'success': True, 'reply': fallback_farmer_reply(message), 'powered_by': 'fallback'})
+        for model_name in _CANDIDATE_GEMINI_MODELS:
+            try:
+                response = gemini_client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=gen_config,
+                )
+                text = (response.text or '').strip()
+                if text:
+                    reply = text
+                    return jsonify({'success': True, 'reply': reply, 'powered_by': f'gemini ({model_name})'})
+            except Exception as e:
+                last_error = str(e)
+                app.logger.warning("Gemini generation with %s failed: %s", model_name, str(e))
+
+    # Log backend failure details safely without exposing keys
+    if last_error:
+        app.logger.error("Gemini failed across all candidate models: %s", last_error)
+
+    # Friendly greeting if offline or failing
+    msg_clean = message.lower().strip().rstrip('!?.')
+    if msg_clean in ('hi', 'hello', 'hey', 'namaste'):
+        return jsonify({
+            'success': True,
+            'reply': 'Namaste! 🌾 I am Farmer AI. How can I help with your crops, fertilizers, pests, or farming practices today?',
+            'powered_by': 'local_greeting'
+        })
+
+    # Return honest error instead of fake / unrelated fallback
+    return jsonify({
+        'success': False,
+        'error': 'Farmer AI is temporarily unavailable. Please try again in a few moments.'
+    }), 503
+
 
 
 @app.route('/api/gemini/chat', methods=['POST'])

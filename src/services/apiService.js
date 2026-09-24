@@ -48,17 +48,17 @@ export async function requestPasswordReset(email) {
   });
 }
 
-export async function verifyResetCode(token) {
+export async function verifyResetCode(token, email = '') {
   return request('/api/auth/verify-reset', {
     method: 'POST',
-    body: JSON.stringify({ token })
+    body: JSON.stringify({ token, email })
   });
 }
 
-export async function resetPassword(new_password, confirm_password) {
+export async function resetPassword(new_password, confirm_password, reset_token = '', email = '') {
   return request('/api/auth/reset-password', {
     method: 'POST',
-    body: JSON.stringify({ new_password, confirm_password })
+    body: JSON.stringify({ new_password, confirm_password, reset_token, email })
   });
 }
 
