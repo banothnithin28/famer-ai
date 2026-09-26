@@ -482,17 +482,34 @@ def send_assets(path):
 def send_upload(filename):
     user = get_current_user()
     if not user:
-        return jsonify({'success': False, 'error': 'Please sign in to view plant photos.'}), 401
+        return jsonify({'success': False, 'error': 'Please sign in to view uploaded files.'}), 401
 
+    clean_filename = os.path.basename(filename)
     conn = get_db()
-    scan = conn.execute(
-        "SELECT id FROM disease_scans WHERE user_id = ? AND image_name = ? LIMIT 1",
-        (user['id'], filename)
+    # Check if the file belongs to user's scans
+    authorized = conn.execute(
+        "SELECT id FROM disease_scans WHERE user_id = ? AND (image_name = ? OR image_name LIKE ?) LIMIT 1",
+        (user['id'], clean_filename, f"%{clean_filename}")
     ).fetchone()
+
+    # Check if file belongs to user's diary entry photo
+    if not authorized:
+        authorized = conn.execute(
+            "SELECT id FROM farm_diary_entries WHERE user_id = ? AND (photo_path = ? OR photo_path LIKE ?) LIMIT 1",
+            (user['id'], clean_filename, f"%{clean_filename}")
+        ).fetchone()
+
+    # Check if file belongs to user's expense receipt
+    if not authorized:
+        authorized = conn.execute(
+            "SELECT id FROM farm_expenses WHERE user_id = ? AND (receipt_path = ? OR receipt_path LIKE ?) LIMIT 1",
+            (user['id'], clean_filename, f"%{clean_filename}")
+        ).fetchone()
+
     conn.close()
-    if not scan:
-        return jsonify({'success': False, 'error': 'Photo not found.'}), 404
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    if not authorized:
+        return jsonify({'success': False, 'error': 'File not found or access denied.'}), 404
+    return send_from_directory(app.config['UPLOAD_FOLDER'], clean_filename)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -2101,6 +2118,1853 @@ def api_gemini_chat():
 def api_chat():
     return chat_response(request.get_json(silent=True) or {})
 
+
+# ==============================================================================
+# FARM DIARY & EXPENSES REST APIs
+# ==============================================================================
+
+ALLOWED_MEDIA_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.pdf'}
+
+def save_farm_media(file_obj):
+    if not file_obj or not file_obj.filename:
+        return None
+    orig_name = secure_filename(file_obj.filename)
+    ext = os.path.splitext(orig_name)[1].lower()
+    if ext not in ALLOWED_MEDIA_EXTENSIONS:
+        raise ValueError(f"Unsupported file type '{ext}'. Allowed types: JPG, PNG, WEBP, BMP, GIF, PDF.")
+    filename = f"farm_{secrets.token_hex(12)}{ext}"
+    target_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file_obj.save(target_path)
+    return filename
+
+def serialize_diary_entry(row):
+    item = dict(row)
+    if item.get('photo_path'):
+        clean_name = os.path.basename(item['photo_path'])
+        item['photo_url'] = f"/uploads/{clean_name}"
+    else:
+        item['photo_url'] = None
+    return item
+
+def serialize_expense(row):
+    item = dict(row)
+    item['amount'] = float(item.get('amount') or 0.0)
+    if item.get('receipt_path'):
+        clean_name = os.path.basename(item['receipt_path'])
+        item['receipt_url'] = f"/uploads/{clean_name}"
+    else:
+        item['receipt_url'] = None
+    return item
+
+def serialize_income(row):
+    item = dict(row)
+    item['quantity'] = float(item.get('quantity') or 0.0)
+    item['selling_price'] = float(item.get('selling_price') or 0.0)
+    item['total_amount'] = float(item.get('total_amount') or 0.0)
+    return item
+
+@app.route('/farm-diary')
+def page_farm_diary():
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
+    return redirect(url_for('dashboard'))
+
+# 1. Farm Diary Endpoints
+@app.route('/api/farm-diary', methods=['GET'])
+def api_get_farm_diary():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view your farm diary.'}), 401
+
+    crop_filter = request.args.get('crop', '').strip()
+    activity_filter = request.args.get('activity_type', '').strip()
+    search = request.args.get('search', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+
+    query = "SELECT * FROM farm_diary_entries WHERE user_id = ?"
+    params = [user['id']]
+
+    if crop_filter:
+        query += " AND LOWER(crop) = LOWER(?)"
+        params.append(crop_filter)
+    if activity_filter:
+        query += " AND LOWER(activity_type) = LOWER(?)"
+        params.append(activity_filter)
+    if start_date:
+        query += " AND date >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND date <= ?"
+        params.append(end_date)
+    if search:
+        query += " AND (LOWER(crop) LIKE ? OR LOWER(field_name) LIKE ? OR LOWER(activity_type) LIKE ? OR LOWER(description) LIKE ? OR LOWER(notes) LIKE ?)"
+        term = f"%{search.lower()}%"
+        params.extend([term, term, term, term, term])
+
+    query += " ORDER BY date DESC, id DESC"
+
+    conn = get_db()
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    entries = [serialize_diary_entry(r) for r in rows]
+    return jsonify({'success': True, 'entries': entries, 'count': len(entries)})
+
+
+@app.route('/api/farm-diary', methods=['POST'])
+def api_create_farm_diary():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to add diary entries.'}), 401
+
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        date_val = str(data.get('date', '')).strip()
+        crop_val = str(data.get('crop', '')).strip()
+        field_val = str(data.get('field_name', '')).strip()
+        activity_val = str(data.get('activity_type', '')).strip()
+        desc_val = str(data.get('description', '')).strip()
+        notes_val = str(data.get('notes', '')).strip()
+        photo_path = str(data.get('photo_path', '')).strip() or None
+    else:
+        date_val = str(request.form.get('date', '')).strip()
+        crop_val = str(request.form.get('crop', '')).strip()
+        field_val = str(request.form.get('field_name', '')).strip()
+        activity_val = str(request.form.get('activity_type', '')).strip()
+        desc_val = str(request.form.get('description', '')).strip()
+        notes_val = str(request.form.get('notes', '')).strip()
+        photo_path = str(request.form.get('photo_path', '')).strip() or None
+
+        if 'photo' in request.files and request.files['photo'].filename:
+            try:
+                photo_path = save_farm_media(request.files['photo'])
+            except ValueError as ve:
+                return jsonify({'success': False, 'error': str(ve)}), 400
+
+    if not date_val:
+        return jsonify({'success': False, 'error': 'Date is required for diary entry.'}), 400
+    if not activity_val:
+        return jsonify({'success': False, 'error': 'Activity type is required.'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO farm_diary_entries (user_id, date, crop, field_name, activity_type, description, notes, photo_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user['id'], date_val, crop_val, field_val, activity_val, desc_val, notes_val, photo_path))
+    entry_id = cursor.lastrowid
+    conn.commit()
+
+    created = conn.execute("SELECT * FROM farm_diary_entries WHERE id = ?", (entry_id,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Farm diary entry created successfully.',
+        'entry': serialize_diary_entry(created)
+    }), 201
+
+
+@app.route('/api/farm-diary/<int:entry_id>', methods=['PUT', 'POST'])
+def api_update_farm_diary(entry_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to update diary entries.'}), 401
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT * FROM farm_diary_entries WHERE id = ? AND user_id = ?",
+        (entry_id, user['id'])
+    ).fetchone()
+
+    if not existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Diary entry not found or unauthorized.'}), 404
+
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        date_val = str(data.get('date', existing['date'])).strip()
+        crop_val = str(data.get('crop', existing['crop'] or '')).strip()
+        field_val = str(data.get('field_name', existing['field_name'] or '')).strip()
+        activity_val = str(data.get('activity_type', existing['activity_type'])).strip()
+        desc_val = str(data.get('description', existing['description'] or '')).strip()
+        notes_val = str(data.get('notes', existing['notes'] or '')).strip()
+        photo_path = data.get('photo_path', existing['photo_path'])
+    else:
+        date_val = str(request.form.get('date', existing['date'])).strip()
+        crop_val = str(request.form.get('crop', existing['crop'] or '')).strip()
+        field_val = str(request.form.get('field_name', existing['field_name'] or '')).strip()
+        activity_val = str(request.form.get('activity_type', existing['activity_type'])).strip()
+        desc_val = str(request.form.get('description', existing['description'] or '')).strip()
+        notes_val = str(request.form.get('notes', existing['notes'] or '')).strip()
+        photo_path = request.form.get('photo_path', existing['photo_path'])
+
+        if 'photo' in request.files and request.files['photo'].filename:
+            try:
+                photo_path = save_farm_media(request.files['photo'])
+            except ValueError as ve:
+                conn.close()
+                return jsonify({'success': False, 'error': str(ve)}), 400
+
+    if not date_val:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Date cannot be empty.'}), 400
+    if not activity_val:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Activity type cannot be empty.'}), 400
+
+    conn.execute("""
+        UPDATE farm_diary_entries
+        SET date = ?, crop = ?, field_name = ?, activity_type = ?, description = ?, notes = ?, photo_path = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ?
+    """, (date_val, crop_val, field_val, activity_val, desc_val, notes_val, photo_path, entry_id, user['id']))
+    conn.commit()
+
+    updated = conn.execute("SELECT * FROM farm_diary_entries WHERE id = ?", (entry_id,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Diary entry updated successfully.',
+        'entry': serialize_diary_entry(updated)
+    })
+
+
+@app.route('/api/farm-diary/<int:entry_id>', methods=['DELETE'])
+def api_delete_farm_diary(entry_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to delete diary entries.'}), 401
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT * FROM farm_diary_entries WHERE id = ? AND user_id = ?",
+        (entry_id, user['id'])
+    ).fetchone()
+
+    if not existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Diary entry not found or unauthorized.'}), 404
+
+    conn.execute("DELETE FROM farm_diary_entries WHERE id = ? AND user_id = ?", (entry_id, user['id']))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Diary entry deleted successfully.'})
+
+
+# 2. Expense Management Endpoints
+@app.route('/api/expenses', methods=['GET'])
+def api_get_expenses():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view expenses.'}), 401
+
+    cat_filter = request.args.get('category', '').strip()
+    crop_filter = request.args.get('crop', '').strip()
+    month_filter = request.args.get('month', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    search = request.args.get('search', '').strip()
+
+    query = "SELECT * FROM farm_expenses WHERE user_id = ?"
+    params = [user['id']]
+
+    if cat_filter:
+        query += " AND LOWER(category) = LOWER(?)"
+        params.append(cat_filter)
+    if crop_filter:
+        query += " AND LOWER(crop) = LOWER(?)"
+        params.append(crop_filter)
+    if month_filter:
+        query += " AND date LIKE ?"
+        params.append(f"{month_filter}%")
+    if start_date:
+        query += " AND date >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND date <= ?"
+        params.append(end_date)
+    if search:
+        query += " AND (LOWER(category) LIKE ? OR LOWER(crop) LIKE ? OR LOWER(field_name) LIKE ? OR LOWER(description) LIKE ?)"
+        term = f"%{search.lower()}%"
+        params.extend([term, term, term, term])
+
+    query += " ORDER BY date DESC, id DESC"
+
+    conn = get_db()
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    expenses = [serialize_expense(r) for r in rows]
+    total_amount = sum(e['amount'] for e in expenses)
+    return jsonify({
+        'success': True,
+        'expenses': expenses,
+        'count': len(expenses),
+        'total_amount': round(total_amount, 2)
+    })
+
+
+@app.route('/api/expenses', methods=['POST'])
+def api_create_expense():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to record an expense.'}), 401
+
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        date_val = str(data.get('date', '')).strip()
+        cat_val = str(data.get('category', '')).strip()
+        amount_raw = data.get('amount')
+        crop_val = str(data.get('crop', '')).strip()
+        field_val = str(data.get('field_name', '')).strip()
+        desc_val = str(data.get('description', '')).strip()
+        receipt_path = str(data.get('receipt_path', '')).strip() or None
+    else:
+        date_val = str(request.form.get('date', '')).strip()
+        cat_val = str(request.form.get('category', '')).strip()
+        amount_raw = request.form.get('amount')
+        crop_val = str(request.form.get('crop', '')).strip()
+        field_val = str(request.form.get('field_name', '')).strip()
+        desc_val = str(request.form.get('description', '')).strip()
+        receipt_path = str(request.form.get('receipt_path', '')).strip() or None
+
+        if 'receipt' in request.files and request.files['receipt'].filename:
+            try:
+                receipt_path = save_farm_media(request.files['receipt'])
+            except ValueError as ve:
+                return jsonify({'success': False, 'error': str(ve)}), 400
+
+    if not date_val:
+        return jsonify({'success': False, 'error': 'Date is required for expense record.'}), 400
+    if not cat_val:
+        return jsonify({'success': False, 'error': 'Category is required for expense record.'}), 400
+
+    try:
+        amount_val = float(amount_raw)
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Please enter a valid numeric expense amount.'}), 400
+
+    if amount_val < 0:
+        return jsonify({'success': False, 'error': 'Expense amount cannot be negative.'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO farm_expenses (user_id, date, category, amount, crop, field_name, description, receipt_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user['id'], date_val, cat_val, amount_val, crop_val, field_val, desc_val, receipt_path))
+    exp_id = cursor.lastrowid
+    conn.commit()
+
+    created = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (exp_id,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Expense recorded successfully.',
+        'expense': serialize_expense(created)
+    }), 201
+
+
+@app.route('/api/expenses/<int:expense_id>', methods=['PUT', 'POST'])
+def api_update_expense(expense_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to update an expense.'}), 401
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT * FROM farm_expenses WHERE id = ? AND user_id = ?",
+        (expense_id, user['id'])
+    ).fetchone()
+
+    if not existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Expense record not found or unauthorized.'}), 404
+
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        date_val = str(data.get('date', existing['date'])).strip()
+        cat_val = str(data.get('category', existing['category'])).strip()
+        amount_raw = data.get('amount', existing['amount'])
+        crop_val = str(data.get('crop', existing['crop'] or '')).strip()
+        field_val = str(data.get('field_name', existing['field_name'] or '')).strip()
+        desc_val = str(data.get('description', existing['description'] or '')).strip()
+        receipt_path = data.get('receipt_path', existing['receipt_path'])
+    else:
+        date_val = str(request.form.get('date', existing['date'])).strip()
+        cat_val = str(request.form.get('category', existing['category'])).strip()
+        amount_raw = request.form.get('amount', existing['amount'])
+        crop_val = str(request.form.get('crop', existing['crop'] or '')).strip()
+        field_val = str(request.form.get('field_name', existing['field_name'] or '')).strip()
+        desc_val = str(request.form.get('description', existing['description'] or '')).strip()
+        receipt_path = request.form.get('receipt_path', existing['receipt_path'])
+
+        if 'receipt' in request.files and request.files['receipt'].filename:
+            try:
+                receipt_path = save_farm_media(request.files['receipt'])
+            except ValueError as ve:
+                conn.close()
+                return jsonify({'success': False, 'error': str(ve)}), 400
+
+    if not date_val:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Date cannot be empty.'}), 400
+    if not cat_val:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Category cannot be empty.'}), 400
+
+    try:
+        amount_val = float(amount_raw)
+    except (ValueError, TypeError):
+        conn.close()
+        return jsonify({'success': False, 'error': 'Please enter a valid numeric expense amount.'}), 400
+
+    if amount_val < 0:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Expense amount cannot be negative.'}), 400
+
+    conn.execute("""
+        UPDATE farm_expenses
+        SET date = ?, category = ?, amount = ?, crop = ?, field_name = ?, description = ?, receipt_path = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ?
+    """, (date_val, cat_val, amount_val, crop_val, field_val, desc_val, receipt_path, expense_id, user['id']))
+    conn.commit()
+
+    updated = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (expense_id,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Expense updated successfully.',
+        'expense': serialize_expense(updated)
+    })
+
+
+@app.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
+def api_delete_expense(expense_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to delete expenses.'}), 401
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT * FROM farm_expenses WHERE id = ? AND user_id = ?",
+        (expense_id, user['id'])
+    ).fetchone()
+
+    if not existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Expense record not found or unauthorized.'}), 404
+
+    conn.execute("DELETE FROM farm_expenses WHERE id = ? AND user_id = ?", (expense_id, user['id']))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Expense record deleted successfully.'})
+
+
+# 3. Income Records Endpoints
+@app.route('/api/income', methods=['GET'])
+def api_get_income():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view income.'}), 401
+
+    crop_filter = request.args.get('crop', '').strip()
+    month_filter = request.args.get('month', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    search = request.args.get('search', '').strip()
+
+    query = "SELECT * FROM farm_income WHERE user_id = ?"
+    params = [user['id']]
+
+    if crop_filter:
+        query += " AND LOWER(crop) = LOWER(?)"
+        params.append(crop_filter)
+    if month_filter:
+        query += " AND date LIKE ?"
+        params.append(f"{month_filter}%")
+    if start_date:
+        query += " AND date >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND date <= ?"
+        params.append(end_date)
+    if search:
+        query += " AND (LOWER(crop) LIKE ? OR LOWER(buyer_name) LIKE ? OR LOWER(notes) LIKE ?)"
+        term = f"%{search.lower()}%"
+        params.extend([term, term, term])
+
+    query += " ORDER BY date DESC, id DESC"
+
+    conn = get_db()
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    income_list = [serialize_income(r) for r in rows]
+    total_income = sum(i['total_amount'] for i in income_list)
+    return jsonify({
+        'success': True,
+        'income': income_list,
+        'count': len(income_list),
+        'total_amount': round(total_income, 2)
+    })
+
+
+@app.route('/api/income', methods=['POST'])
+def api_create_income():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to record farm income.'}), 401
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    date_val = str(data.get('date', '')).strip()
+    crop_val = str(data.get('crop', '')).strip()
+    unit_val = str(data.get('unit', 'kg')).strip() or 'kg'
+    buyer_val = str(data.get('buyer_name', '')).strip()
+    notes_val = str(data.get('notes', '')).strip()
+
+    if not date_val:
+        return jsonify({'success': False, 'error': 'Date is required for income record.'}), 400
+    if not crop_val:
+        return jsonify({'success': False, 'error': 'Crop name is required.'}), 400
+
+    try:
+        qty_val = float(data.get('quantity', 0))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Please provide a valid numeric quantity.'}), 400
+
+    if qty_val <= 0:
+        return jsonify({'success': False, 'error': 'Quantity must be greater than zero.'}), 400
+
+    try:
+        price_val = float(data.get('selling_price', 0))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Please provide a valid numeric selling price.'}), 400
+
+    if price_val < 0:
+        return jsonify({'success': False, 'error': 'Selling price cannot be negative.'}), 400
+
+    # Auto calculate or accept explicit total
+    total_raw = data.get('total_amount')
+    if total_raw is not None and str(total_raw).strip() != '':
+        try:
+            total_val = float(total_raw)
+            if total_val < 0:
+                return jsonify({'success': False, 'error': 'Total amount cannot be negative.'}), 400
+        except (ValueError, TypeError):
+            total_val = round(qty_val * price_val, 2)
+    else:
+        total_val = round(qty_val * price_val, 2)
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO farm_income (user_id, date, crop, quantity, unit, selling_price, total_amount, buyer_name, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user['id'], date_val, crop_val, qty_val, unit_val, price_val, total_val, buyer_val, notes_val))
+    inc_id = cursor.lastrowid
+    conn.commit()
+
+    created = conn.execute("SELECT * FROM farm_income WHERE id = ?", (inc_id,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Income record created successfully.',
+        'income': serialize_income(created)
+    }), 201
+
+
+@app.route('/api/income/<int:income_id>', methods=['PUT', 'POST'])
+def api_update_income(income_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to update income.'}), 401
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT * FROM farm_income WHERE id = ? AND user_id = ?",
+        (income_id, user['id'])
+    ).fetchone()
+
+    if not existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Income record not found or unauthorized.'}), 404
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    date_val = str(data.get('date', existing['date'])).strip()
+    crop_val = str(data.get('crop', existing['crop'])).strip()
+    unit_val = str(data.get('unit', existing['unit'] or 'kg')).strip() or 'kg'
+    buyer_val = str(data.get('buyer_name', existing['buyer_name'] or '')).strip()
+    notes_val = str(data.get('notes', existing['notes'] or '')).strip()
+
+    if not date_val:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Date cannot be empty.'}), 400
+    if not crop_val:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Crop cannot be empty.'}), 400
+
+    try:
+        qty_val = float(data.get('quantity', existing['quantity']))
+    except (ValueError, TypeError):
+        conn.close()
+        return jsonify({'success': False, 'error': 'Please provide a valid numeric quantity.'}), 400
+
+    if qty_val <= 0:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Quantity must be greater than zero.'}), 400
+
+    try:
+        price_val = float(data.get('selling_price', existing['selling_price']))
+    except (ValueError, TypeError):
+        conn.close()
+        return jsonify({'success': False, 'error': 'Please provide a valid numeric selling price.'}), 400
+
+    if price_val < 0:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Selling price cannot be negative.'}), 400
+
+    total_raw = data.get('total_amount')
+    if total_raw is not None and str(total_raw).strip() != '':
+        try:
+            total_val = float(total_raw)
+            if total_val < 0:
+                conn.close()
+                return jsonify({'success': False, 'error': 'Total amount cannot be negative.'}), 400
+        except (ValueError, TypeError):
+            total_val = round(qty_val * price_val, 2)
+    else:
+        total_val = round(qty_val * price_val, 2)
+
+    conn.execute("""
+        UPDATE farm_income
+        SET date = ?, crop = ?, quantity = ?, unit = ?, selling_price = ?, total_amount = ?, buyer_name = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ?
+    """, (date_val, crop_val, qty_val, unit_val, price_val, total_val, buyer_val, notes_val, income_id, user['id']))
+    conn.commit()
+
+    updated = conn.execute("SELECT * FROM farm_income WHERE id = ?", (income_id,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Income record updated successfully.',
+        'income': serialize_income(updated)
+    })
+
+
+@app.route('/api/income/<int:income_id>', methods=['DELETE'])
+def api_delete_income(income_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to delete income records.'}), 401
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT * FROM farm_income WHERE id = ? AND user_id = ?",
+        (income_id, user['id'])
+    ).fetchone()
+
+    if not existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Income record not found or unauthorized.'}), 404
+
+    conn.execute("DELETE FROM farm_income WHERE id = ? AND user_id = ?", (income_id, user['id']))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Income record deleted successfully.'})
+
+
+# 4. Unified Farm Diary + Expenses Summary
+@app.route('/api/farm-summary', methods=['GET'])
+def api_get_farm_summary():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view farm summary.'}), 401
+
+    conn = get_db()
+    uid = user['id']
+
+    # Total expenses
+    exp_sum_row = conn.execute("SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) as count FROM farm_expenses WHERE user_id = ?", (uid,)).fetchone()
+    total_expenses = round(float(exp_sum_row['total'] or 0.0), 2)
+    expense_count = int(exp_sum_row['count'] or 0)
+
+    # Total income
+    inc_sum_row = conn.execute("SELECT COALESCE(SUM(total_amount), 0) AS total, COUNT(*) as count FROM farm_income WHERE user_id = ?", (uid,)).fetchone()
+    total_income = round(float(inc_sum_row['total'] or 0.0), 2)
+    income_count = int(inc_sum_row['count'] or 0)
+
+    # Net balance
+    net_balance = round(total_income - total_expenses, 2)
+
+    # Diary entries count
+    diary_count_row = conn.execute("SELECT COUNT(*) as count FROM farm_diary_entries WHERE user_id = ?", (uid,)).fetchone()
+    diary_count = int(diary_count_row['count'] or 0)
+
+    # Expenses by category
+    cat_rows = conn.execute("""
+        SELECT category, COALESCE(SUM(amount), 0) as total, COUNT(*) as count
+        FROM farm_expenses
+        WHERE user_id = ?
+        GROUP BY category
+        ORDER BY total DESC
+    """, (uid,)).fetchall()
+
+    expenses_by_category = []
+    for r in cat_rows:
+        cat_total = round(float(r['total']), 2)
+        pct = round((cat_total / total_expenses * 100), 1) if total_expenses > 0 else 0
+        expenses_by_category.append({
+            'category': r['category'],
+            'total': cat_total,
+            'count': int(r['count']),
+            'percentage': pct
+        })
+
+    # Expenses by crop
+    crop_rows = conn.execute("""
+        SELECT COALESCE(NULLIF(crop, ''), 'General Farm') as crop_name, COALESCE(SUM(amount), 0) as total, COUNT(*) as count
+        FROM farm_expenses
+        WHERE user_id = ?
+        GROUP BY crop_name
+        ORDER BY total DESC
+    """, (uid,)).fetchall()
+
+    expenses_by_crop = [
+        {'crop': r['crop_name'], 'total': round(float(r['total']), 2), 'count': int(r['count'])}
+        for r in crop_rows
+    ]
+
+    # Expenses by month (last 12 months)
+    month_exp_rows = conn.execute("""
+        SELECT SUBSTR(date, 1, 7) as month_key, COALESCE(SUM(amount), 0) as total, COUNT(*) as count
+        FROM farm_expenses
+        WHERE user_id = ? AND date IS NOT NULL AND length(date) >= 7
+        GROUP BY month_key
+        ORDER BY month_key DESC
+        LIMIT 12
+    """, (uid,)).fetchall()
+
+    expenses_by_month = [
+        {'month': r['month_key'], 'total': round(float(r['total']), 2), 'count': int(r['count'])}
+        for r in month_exp_rows
+    ]
+
+    # Income by month (last 12 months)
+    month_inc_rows = conn.execute("""
+        SELECT SUBSTR(date, 1, 7) as month_key, COALESCE(SUM(total_amount), 0) as total, COUNT(*) as count
+        FROM farm_income
+        WHERE user_id = ? AND date IS NOT NULL AND length(date) >= 7
+        GROUP BY month_key
+        ORDER BY month_key DESC
+        LIMIT 12
+    """, (uid,)).fetchall()
+
+    income_by_month = [
+        {'month': r['month_key'], 'total': round(float(r['total']), 2), 'count': int(r['count'])}
+        for r in month_inc_rows
+    ]
+
+    # Recent activities (unified chronologically)
+    recent_diary = conn.execute("""
+        SELECT id, date, activity_type, crop, field_name, description, photo_path, created_at
+        FROM farm_diary_entries
+        WHERE user_id = ?
+        ORDER BY date DESC, id DESC
+        LIMIT 8
+    """, (uid,)).fetchall()
+
+    recent_expenses = conn.execute("""
+        SELECT id, date, category, amount, crop, field_name, description, receipt_path, created_at
+        FROM farm_expenses
+        WHERE user_id = ?
+        ORDER BY date DESC, id DESC
+        LIMIT 8
+    """, (uid,)).fetchall()
+
+    recent_income = conn.execute("""
+        SELECT id, date, crop, quantity, unit, selling_price, total_amount, buyer_name, created_at
+        FROM farm_income
+        WHERE user_id = ?
+        ORDER BY date DESC, id DESC
+        LIMIT 8
+    """, (uid,)).fetchall()
+
+    conn.close()
+
+    unified_activities = []
+    for d in recent_diary:
+        crop_name = d['crop'] or 'Field'
+        field_part = f" • {d['field_name']}" if d['field_name'] else ''
+        unified_activities.append({
+            'type': 'diary',
+            'id': d['id'],
+            'date': d['date'],
+            'title': d['activity_type'],
+            'subtitle': f"{crop_name}{field_part}".strip(),
+            'description': d['description'] or '',
+            'photo_url': f"/uploads/{os.path.basename(d['photo_path'])}" if d['photo_path'] else None,
+            'created_at': d['created_at'] or d['date']
+        })
+
+    for e in recent_expenses:
+        crop_name = e['crop'] or 'General Farm'
+        field_part = f" • {e['field_name']}" if e['field_name'] else ''
+        unified_activities.append({
+            'type': 'expense',
+            'id': e['id'],
+            'date': e['date'],
+            'title': e['category'],
+            'subtitle': f"{crop_name}{field_part}".strip(),
+            'amount': float(e['amount'] or 0.0),
+            'description': e['description'] or '',
+            'receipt_url': f"/uploads/{os.path.basename(e['receipt_path'])}" if e['receipt_path'] else None,
+            'created_at': e['created_at'] or e['date']
+        })
+
+    for i in recent_income:
+        buyer_part = f" • Buyer: {i['buyer_name']}" if i['buyer_name'] else ''
+        unified_activities.append({
+            'type': 'income',
+            'id': i['id'],
+            'date': i['date'],
+            'title': f"Sold {i['crop']}",
+            'subtitle': f"{i['quantity']} {i['unit']} @ ₹{i['selling_price']}/{i['unit']}{buyer_part}",
+            'amount': float(i['total_amount'] or 0.0),
+            'description': f"Gross return: ₹{i['total_amount']}",
+            'created_at': i['created_at'] or i['date']
+        })
+
+    # Sort combined activities by date descending, created_at descending
+    unified_activities.sort(key=lambda x: (x.get('date', ''), x.get('created_at', '')), reverse=True)
+    recent_activities = unified_activities[:12]
+
+    return jsonify({
+        'success': True,
+        'summary': {
+            'total_expenses': total_expenses,
+            'total_income': total_income,
+            'net_balance': net_balance,
+            'diary_count': diary_count,
+            'expense_count': expense_count,
+            'income_count': income_count,
+            'expenses_by_category': expenses_by_category,
+            'expenses_by_crop': expenses_by_crop,
+            'expenses_by_month': expenses_by_month,
+            'income_by_month': income_by_month,
+            'recent_activities': recent_activities
+        }
+    })
+
+
+# ==============================================================================
+# PHASE 2: TRACTOR WORK TRACKER REST APIs & AUDIT SYSTEM
+# ==============================================================================
+
+VALID_WORK_TYPES = {
+    'Ploughing', 'Cultivating', 'Rotavating', 'Sowing',
+    'Harvesting', 'Transport', 'Spraying', 'Other'
+}
+
+VALID_RATE_UNITS = {'per_hour', 'per_acre', 'fixed'}
+
+def generate_tractor_job_id(conn, work_date):
+    try:
+        dt = datetime.datetime.strptime(work_date.strip(), '%Y-%m-%d')
+        date_str = dt.strftime('%Y%m%d')
+    except Exception:
+        date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+
+    prefix = f"TR-{date_str}-"
+    rows = conn.execute(
+        "SELECT job_id FROM tractor_jobs WHERE job_id LIKE ? ORDER BY job_id DESC",
+        (f"{prefix}%",)
+    ).fetchall()
+
+    max_seq = 0
+    for r in rows:
+        jid = str(r['job_id'])
+        parts = jid.split('-')
+        if len(parts) >= 3 and parts[-1].isdigit():
+            max_seq = max(max_seq, int(parts[-1]))
+
+    next_seq = max_seq + 1
+    return f"{prefix}{next_seq:03d}"
+
+
+def parse_iso_ts(ts_str):
+    if not ts_str:
+        return None
+    try:
+        ts_clean = str(ts_str).replace('Z', '+00:00').strip()
+        if 'T' in ts_clean:
+            return datetime.datetime.fromisoformat(ts_clean)
+        return datetime.datetime.strptime(ts_clean, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
+    except Exception:
+        try:
+            return datetime.datetime.fromtimestamp(float(ts_str), tz=datetime.timezone.utc)
+        except Exception:
+            return None
+
+
+def compute_job_timeline_and_seconds(events, current_status='CREATED', total_working_seconds=0):
+    """
+    Chronologically steps through events and computes active working duration in seconds.
+    Pauses and break intervals are strictly excluded from active working time.
+    """
+    sorted_events = sorted(events, key=lambda e: e.get('server_timestamp') or e.get('created_at') or '')
+    active_seconds = 0
+    current_interval_start = None
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    for ev in sorted_events:
+        etype = ev.get('event_type')
+        ts = parse_iso_ts(ev.get('server_timestamp'))
+        if not ts:
+            continue
+
+        if etype in ('STARTED', 'START_CONFIRMED', 'RESUMED'):
+            current_interval_start = ts
+        elif etype in ('PAUSED', 'FINISHED', 'FINISH_CONFIRMED', 'CANCELLED', 'DISPUTED'):
+            if current_interval_start is not None:
+                duration = max(0, int((ts - current_interval_start).total_seconds()))
+                active_seconds += duration
+                current_interval_start = None
+
+    if current_status == 'RUNNING' and current_interval_start is not None:
+        duration = max(0, int((now - current_interval_start).total_seconds()))
+        active_seconds += duration
+
+    return max(active_seconds, int(total_working_seconds or 0))
+
+
+def compute_tractor_payment(rate, rate_unit, field_size, active_seconds):
+    rate = float(rate or 0.0)
+    field_size = float(field_size or 0.0)
+
+    if rate_unit == 'per_hour':
+        hours = active_seconds / 3600.0
+        return round(hours * rate, 2)
+    elif rate_unit == 'per_acre':
+        acres = field_size if field_size > 0 else 1.0
+        return round(acres * rate, 2)
+    elif rate_unit == 'fixed':
+        return round(rate, 2)
+    return round(rate, 2)
+
+
+def serialize_tractor_job(row, user_id=None, conn=None):
+    item = dict(row)
+    item['field_size'] = float(item.get('field_size') or 0.0)
+    item['rate'] = float(item.get('rate') or 0.0)
+    item['total_working_seconds'] = int(item.get('total_working_seconds') or 0)
+    item['calculated_amount'] = float(item.get('calculated_amount') or 0.0)
+    item['final_amount'] = float(item.get('final_amount') or 0.0)
+
+    if user_id:
+        item['is_farmer'] = (item.get('farmer_id') == user_id)
+        item['is_driver'] = (item.get('driver_id') == user_id)
+        if item['is_farmer']:
+            item['current_user_role'] = 'farmer'
+        elif item['is_driver']:
+            item['current_user_role'] = 'driver'
+        else:
+            item['current_user_role'] = 'viewer'
+
+    if conn:
+        job_id_pk = item['id']
+        events_rows = conn.execute(
+            """SELECT e.*, u.name as performed_by_name 
+               FROM tractor_work_events e 
+               LEFT JOIN users u ON e.performed_by = u.id 
+               WHERE e.tractor_job_id = ? 
+               ORDER BY e.id ASC""",
+            (job_id_pk,)
+        ).fetchall()
+
+        events = [dict(ev) for ev in events_rows]
+        item['events'] = events
+
+        live_active_seconds = compute_job_timeline_and_seconds(
+            events,
+            current_status=item.get('status'),
+            total_working_seconds=item.get('total_working_seconds')
+        )
+        item['live_active_seconds'] = live_active_seconds
+
+        live_amount = compute_tractor_payment(
+            item['rate'],
+            item['rate_unit'],
+            item['field_size'],
+            live_active_seconds
+        )
+        item['live_estimated_amount'] = live_amount
+
+        disputes_rows = conn.execute(
+            """SELECT d.*, u.name as raised_by_name 
+               FROM tractor_disputes d 
+               LEFT JOIN users u ON d.raised_by = u.id 
+               WHERE d.tractor_job_id = ? 
+               ORDER BY d.id DESC""",
+            (job_id_pk,)
+        ).fetchall()
+        item['disputes'] = [dict(d) for d in disputes_rows]
+
+        farmer_row = conn.execute("SELECT name, email, location FROM users WHERE id = ?", (item['farmer_id'],)).fetchone()
+        if farmer_row:
+            item['farmer_name'] = farmer_row['name']
+            item['farmer_email'] = farmer_row['email']
+            item['farmer_location'] = farmer_row['location']
+
+        if item.get('driver_id'):
+            driver_row = conn.execute("SELECT name, email FROM users WHERE id = ?", (item['driver_id'],)).fetchone()
+            if driver_row:
+                item['driver_user_name'] = driver_row['name']
+                item['driver_email'] = driver_row['email']
+                if not item.get('driver_name'):
+                    item['driver_name'] = driver_row['name']
+
+        if item.get('expense_id'):
+            exp_row = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (item['expense_id'],)).fetchone()
+            if exp_row:
+                item['expense'] = dict(exp_row)
+
+    return item
+
+
+@app.route('/tractor-work')
+def page_tractor_work():
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/api/tractor/jobs', methods=['GET'])
+def api_get_tractor_jobs():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view tractor work records.'}), 401
+
+    role = request.args.get('role', 'all').strip().lower() # 'farmer', 'driver', 'all'
+    status_filter = request.args.get('status', '').strip().upper()
+    crop_filter = request.args.get('crop', '').strip()
+    work_type_filter = request.args.get('work_type', '').strip()
+    search = request.args.get('search', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+
+    conn = get_db()
+    uid = user['id']
+
+    if role == 'farmer':
+        where_clauses = ["t.farmer_id = ?"]
+        params = [uid]
+    elif role == 'driver':
+        where_clauses = ["t.driver_id = ?"]
+        params = [uid]
+    else:
+        where_clauses = ["(t.farmer_id = ? OR t.driver_id = ?)"]
+        params = [uid, uid]
+
+    if status_filter:
+        where_clauses.append("t.status = ?")
+        params.append(status_filter)
+    if crop_filter:
+        where_clauses.append("LOWER(t.crop) = LOWER(?)")
+        params.append(crop_filter)
+    if work_type_filter:
+        where_clauses.append("LOWER(t.work_type) = LOWER(?)")
+        params.append(work_type_filter)
+    if start_date:
+        where_clauses.append("t.work_date >= ?")
+        params.append(start_date)
+    if end_date:
+        where_clauses.append("t.work_date <= ?")
+        params.append(end_date)
+    if search:
+        where_clauses.append(
+            "(t.job_id LIKE ? OR LOWER(t.crop) LIKE ? OR LOWER(t.field_name) LIKE ? OR LOWER(t.work_type) LIKE ? OR LOWER(COALESCE(t.driver_name, '')) LIKE ? OR LOWER(COALESCE(u_farmer.name, '')) LIKE ?)"
+        )
+        term = f"%{search.lower()}%"
+        params.extend([term, term, term, term, term, term])
+
+    where_sql = " AND ".join(where_clauses)
+    query = f"""
+        SELECT t.*, u_farmer.name as farmer_name, u_driver.name as driver_user_name
+        FROM tractor_jobs t
+        LEFT JOIN users u_farmer ON t.farmer_id = u_farmer.id
+        LEFT JOIN users u_driver ON t.driver_id = u_driver.id
+        WHERE {where_sql}
+        ORDER BY t.work_date DESC, t.id DESC
+    """
+
+    rows = conn.execute(query, params).fetchall()
+    jobs = [serialize_tractor_job(r, user_id=uid, conn=conn) for r in rows]
+    conn.close()
+
+    return jsonify({'success': True, 'jobs': jobs, 'count': len(jobs)})
+
+
+@app.route('/api/tractor/jobs', methods=['POST'])
+def api_create_tractor_job():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to create a tractor job.'}), 401
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    work_date = str(data.get('work_date', '')).strip()
+    field_name = str(data.get('field_name', '')).strip()
+    crop = str(data.get('crop', '')).strip()
+    work_type = str(data.get('work_type', '')).strip()
+    rate_raw = data.get('rate')
+    rate_unit = str(data.get('rate_unit', 'per_hour')).strip().lower()
+    field_size_raw = data.get('field_size')
+    driver_name = str(data.get('driver_name', '')).strip() or None
+    driver_phone = str(data.get('driver_phone', '')).strip() or None
+    tractor_number = str(data.get('tractor_number', '')).strip() or None
+    notes = str(data.get('notes', '')).strip() or None
+
+    if not work_date:
+        return jsonify({'success': False, 'error': 'Work date is required.'}), 400
+    if not field_name:
+        return jsonify({'success': False, 'error': 'Field name is required.'}), 400
+    if not crop:
+        return jsonify({'success': False, 'error': 'Crop name is required.'}), 400
+    if not work_type:
+        return jsonify({'success': False, 'error': 'Work type is required.'}), 400
+    if rate_unit not in VALID_RATE_UNITS:
+        return jsonify({'success': False, 'error': f"Invalid rate unit '{rate_unit}'. Allowed: per_hour, per_acre, fixed."}), 400
+
+    try:
+        rate = float(rate_raw)
+        if rate <= 0:
+            return jsonify({'success': False, 'error': 'Rate must be greater than zero.'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Please provide a valid numeric agreed rate.'}), 400
+
+    field_size = 0.0
+    if field_size_raw is not None and str(field_size_raw).strip() != '':
+        try:
+            field_size = float(field_size_raw)
+            if field_size < 0:
+                return jsonify({'success': False, 'error': 'Field size cannot be negative.'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'Field size must be a valid number.'}), 400
+
+    conn = get_db()
+    job_id = generate_tractor_job_id(conn, work_date)
+    join_token = secrets.token_urlsafe(16)
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO tractor_jobs (
+            job_id, join_token, farmer_id, driver_name, driver_phone, tractor_number,
+            crop, field_name, work_type, work_date, field_size, rate, rate_unit,
+            status, total_working_seconds, calculated_amount, final_amount, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREATED', 0, 0.0, 0.0, ?)
+    """, (
+        job_id, join_token, user['id'], driver_name, driver_phone, tractor_number,
+        crop, field_name, work_type, work_date, field_size, rate, rate_unit, notes
+    ))
+    job_pk = cursor.lastrowid
+
+    # Record CREATED audit event
+    cursor.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'CREATED', ?, ?, ?)
+    """, (job_pk, user['id'], server_now, f"Job created by farmer {user['name']} with rate ₹{rate}/{rate_unit}"))
+
+    conn.commit()
+
+    created_row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_pk,)).fetchone()
+    serialized = serialize_tractor_job(created_row, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f'Tractor job {job_id} created successfully.',
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/tractor/jobs/<identifier>', methods=['GET'])
+def api_get_tractor_job_detail(identifier):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view tractor job details.'}), 401
+
+    conn = get_db()
+    row = None
+    if identifier.isdigit():
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (int(identifier),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE job_id = ?", (identifier.upper(),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE join_token = ?", (identifier,)).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Tractor job not found.'}), 404
+
+    # Authorization Check
+    is_owner = (row['farmer_id'] == user['id'])
+    is_driver = (row['driver_id'] == user['id'])
+
+    # If user is not yet owner/driver, allow viewing preview if status is CREATED or joining
+    serialized = serialize_tractor_job(row, user_id=user['id'], conn=conn)
+    conn.close()
+
+    if not is_owner and not is_driver:
+        if row['status'] == 'CREATED':
+            serialized['is_preview_for_join'] = True
+            return jsonify({'success': True, 'job': serialized})
+        return jsonify({'success': False, 'error': 'You are not authorized to view this tractor job.'}), 403
+
+    return jsonify({'success': True, 'job': serialized})
+
+
+@app.route('/api/tractor/jobs/<identifier>/join', methods=['POST'])
+def api_join_tractor_job(identifier):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in as tractor driver to join this job.'}), 401
+
+    conn = get_db()
+    row = None
+    if identifier.isdigit():
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (int(identifier),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE job_id = ?", (identifier.upper(),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE join_token = ?", (identifier,)).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Tractor job not found.'}), 404
+
+    if row['status'] not in ('CREATED', 'DRIVER_JOINED'):
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot join job in '{row['status']}' status."}), 400
+
+    job_pk = row['id']
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    driver_name = user['name']
+
+    conn.execute("""
+        UPDATE tractor_jobs 
+        SET driver_id = ?, driver_name = ?, status = 'DRIVER_JOINED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (user['id'], driver_name, job_pk))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'DRIVER_JOINED', ?, ?, ?)
+    """, (job_pk, user['id'], server_now, f"Driver {driver_name} joined job {row['job_id']}"))
+
+    conn.commit()
+
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_pk,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Joined tractor job {row['job_id']} successfully.",
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/start', methods=['POST'])
+def api_start_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to start tractor work.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to start this job.'}), 403
+
+    if job['status'] not in ('DRIVER_JOINED', 'PAUSED', 'START_REQUESTED'):
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot start work when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # If the counterparty directly starts or confirms
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'START_REQUESTED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (job_id,))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'START_REQUESTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Start requested by {user['name']}"))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Start request registered. Awaiting confirmation.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/confirm-start', methods=['POST'])
+def api_confirm_start_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to confirm start.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to confirm start for this job.'}), 403
+
+    if job['status'] not in ('START_REQUESTED', 'DRIVER_JOINED', 'PAUSED'):
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot confirm start when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (job_id,))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'STARTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work officially started by {user['name']} at {server_now}"))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Tractor work is now RUNNING.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/pause', methods=['POST'])
+def api_pause_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to pause tractor work.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] != 'RUNNING':
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot pause work when status is '{job['status']}'."}), 400
+
+    data = request.get_json(silent=True) or {}
+    pause_notes = str(data.get('notes', 'Break / Refueling / Rest')).strip() or 'Break / Refueling'
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Record PAUSED event
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'PAUSED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work paused by {user['name']}: {pause_notes}"))
+
+    # Compute exact elapsed seconds up to now
+    events = [dict(r) for r in conn.execute("SELECT * FROM tractor_work_events WHERE tractor_job_id = ? ORDER BY id ASC", (job_id,)).fetchall()]
+    active_secs = compute_job_timeline_and_seconds(events, current_status='PAUSED', total_working_seconds=job['total_working_seconds'])
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'PAUSED', total_working_seconds = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (active_secs, job_id))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Tractor work PAUSED. Break time will not be billed.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/resume', methods=['POST'])
+def api_resume_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to resume tractor work.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] != 'PAUSED':
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot resume work when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (job_id,))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'RESUMED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work resumed by {user['name']} at {server_now}"))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Tractor work RESUMED.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/finish', methods=['POST'])
+def api_finish_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to finish work.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] not in ('RUNNING', 'PAUSED', 'FINISH_REQUESTED'):
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot finish job when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'FINISH_REQUESTED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (job_id,))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'FINISH_REQUESTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Completion requested by {user['name']}"))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Completion requested. Awaiting counterparty confirmation.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/confirm-finish', methods=['POST'])
+def api_confirm_finish_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to confirm completion.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to confirm finish.'}), 403
+
+    if job['status'] not in ('FINISH_REQUESTED', 'RUNNING', 'PAUSED'):
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot confirm finish when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Record FINISHED event
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'FINISHED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work confirmed COMPLETED by {user['name']} at {server_now}"))
+
+    # Compute final official server-side active seconds (excluding all pauses)
+    events = [dict(r) for r in conn.execute("SELECT * FROM tractor_work_events WHERE tractor_job_id = ? ORDER BY id ASC", (job_id,)).fetchall()]
+    final_active_secs = compute_job_timeline_and_seconds(events, current_status='COMPLETED', total_working_seconds=job['total_working_seconds'])
+
+    # Compute final payment
+    final_amount = compute_tractor_payment(job['rate'], job['rate_unit'], job['field_size'], final_active_secs)
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'COMPLETED',
+            total_working_seconds = ?,
+            calculated_amount = ?,
+            final_amount = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (final_active_secs, final_amount, final_amount, job_id))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Tractor job {job['job_id']} COMPLETED. Total Active Time: {final_active_secs // 3600}h {(final_active_secs % 3600) // 60}m | Amount: ₹{final_amount:,.2f}",
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/dispute', methods=['POST'])
+def api_dispute_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to raise a dispute.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to raise dispute on this job.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    reason = str(data.get('reason', '')).strip()
+    description = str(data.get('description', '')).strip()
+
+    if not reason:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Dispute reason is required.'}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        INSERT INTO tractor_disputes (tractor_job_id, raised_by, reason, description, status)
+        VALUES (?, ?, ?, ?, 'OPEN')
+    """, (job_id, user['id'], reason, description))
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = 'DISPUTED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (job_id,))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'DISPUTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Dispute raised by {user['name']}: {reason} - {description}"))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Dispute registered. Status updated to DISPUTED.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/resolve-dispute', methods=['POST'])
+def api_resolve_dispute_tractor_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to resolve dispute.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    resolution = str(data.get('resolution', 'Mutual agreement reached')).strip()
+    next_status = str(data.get('next_status', 'RUNNING')).strip().upper()
+    if next_status not in ('RUNNING', 'PAUSED', 'COMPLETED'):
+        next_status = 'RUNNING'
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        UPDATE tractor_disputes
+        SET status = 'RESOLVED', resolution = ?, resolved_at = CURRENT_TIMESTAMP
+        WHERE tractor_job_id = ? AND status = 'OPEN'
+    """, (resolution, job_id))
+
+    conn.execute("""
+        UPDATE tractor_jobs
+        SET status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (next_status, job_id))
+
+    conn.execute("""
+        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'DISPUTE_RESOLVED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Dispute resolved by {user['name']}: {resolution}"))
+
+    conn.commit()
+    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f'Dispute resolved. Job status set to {next_status}.',
+        'job': serialized
+    })
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/add-to-expenses', methods=['POST'])
+def api_add_tractor_to_expenses(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to add tractor expenses.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Tractor job not found.'}), 404
+
+    if user['id'] != job['farmer_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Only the farmer can add this tractor job to farm expenses.'}), 403
+
+    if job['status'] != 'COMPLETED':
+        conn.close()
+        return jsonify({'success': False, 'error': 'Only completed tractor jobs can be added to expenses.'}), 400
+
+    if job['expense_id']:
+        # Already linked
+        existing_exp = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (job['expense_id'],)).fetchone()
+        conn.close()
+        return jsonify({
+            'success': True,
+            'message': 'This tractor job is already recorded in Farm Expenses.',
+            'expense': dict(existing_exp) if existing_exp else None,
+            'already_added': True
+        })
+
+    amount = float(job['final_amount'] or job['calculated_amount'] or 0.0)
+    dur_secs = int(job['total_working_seconds'] or 0)
+    hours = dur_secs // 3600
+    mins = (dur_secs % 3600) // 60
+    dur_str = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
+
+    desc = f"Tractor work — {job['work_type']} (Job ID: {job['job_id']}, Duration: {dur_str}, Rate: ₹{job['rate']}/{job['rate_unit']})"
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO farm_expenses (user_id, date, category, amount, crop, field_name, description)
+        VALUES (?, ?, 'Tractor', ?, ?, ?, ?)
+    """, (user['id'], job['work_date'], amount, job['crop'], job['field_name'], desc))
+    exp_id = cursor.lastrowid
+
+    cursor.execute("""
+        UPDATE tractor_jobs SET expense_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    """, (exp_id, job_id))
+
+    conn.commit()
+
+    created_exp = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (exp_id,)).fetchone()
+    updated_job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_tractor_job(updated_job, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Added ₹{amount:,.2f} to Farm Expenses under category 'Tractor'.",
+        'expense': dict(created_exp),
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/tractor/jobs/<int:job_id>/events', methods=['GET'])
+def api_get_tractor_job_events(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['driver_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    events_rows = conn.execute("""
+        SELECT e.*, u.name as performed_by_name, u.email as performed_by_email
+        FROM tractor_work_events e
+        LEFT JOIN users u ON e.performed_by = u.id
+        WHERE e.tractor_job_id = ?
+        ORDER BY e.id ASC
+    """, (job_id,)).fetchall()
+
+    events = [dict(ev) for ev in events_rows]
+    conn.close()
+
+    return jsonify({'success': True, 'events': events, 'count': len(events)})
+
+
+@app.route('/api/tractor/summary', methods=['GET'])
+def api_get_tractor_summary():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view tractor summary.'}), 401
+
+    uid = user['id']
+    conn = get_db()
+    current_month = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m')
+
+    # Farmer metrics
+    farmer_active = conn.execute(
+        "SELECT COUNT(*) as c FROM tractor_jobs WHERE farmer_id = ? AND status IN ('CREATED', 'DRIVER_JOINED', 'START_REQUESTED', 'RUNNING', 'PAUSED', 'FINISH_REQUESTED', 'DISPUTED')",
+        (uid,)
+    ).fetchone()['c']
+
+    farmer_completed = conn.execute(
+        "SELECT COUNT(*) as c FROM tractor_jobs WHERE farmer_id = ? AND status = 'COMPLETED'",
+        (uid,)
+    ).fetchone()['c']
+
+    farmer_pending = conn.execute(
+        "SELECT COUNT(*) as c FROM tractor_jobs WHERE farmer_id = ? AND status IN ('START_REQUESTED', 'FINISH_REQUESTED', 'DISPUTED')",
+        (uid,)
+    ).fetchone()['c']
+
+    month_farmer_exp_row = conn.execute(
+        "SELECT COALESCE(SUM(final_amount), 0) as s FROM tractor_jobs WHERE farmer_id = ? AND status = 'COMPLETED' AND work_date LIKE ?",
+        (uid, f"{current_month}%")
+    ).fetchone()
+    month_tractor_expenses = round(float(month_farmer_exp_row['s'] or 0.0), 2)
+
+    total_farmer_exp_row = conn.execute(
+        "SELECT COALESCE(SUM(final_amount), 0) as s FROM tractor_jobs WHERE farmer_id = ? AND status = 'COMPLETED'",
+        (uid,)
+    ).fetchone()
+    total_tractor_expenses = round(float(total_farmer_exp_row['s'] or 0.0), 2)
+
+    # Driver metrics
+    driver_active = conn.execute(
+        "SELECT COUNT(*) as c FROM tractor_jobs WHERE driver_id = ? AND status IN ('DRIVER_JOINED', 'START_REQUESTED', 'RUNNING', 'PAUSED', 'FINISH_REQUESTED', 'DISPUTED')",
+        (uid,)
+    ).fetchone()['c']
+
+    driver_completed = conn.execute(
+        "SELECT COUNT(*) as c FROM tractor_jobs WHERE driver_id = ? AND status = 'COMPLETED'",
+        (uid,)
+    ).fetchone()['c']
+
+    driver_pending = conn.execute(
+        "SELECT COUNT(*) as c FROM tractor_jobs WHERE driver_id = ? AND status IN ('START_REQUESTED', 'FINISH_REQUESTED', 'DISPUTED')",
+        (uid,)
+    ).fetchone()['c']
+
+    driver_earnings_row = conn.execute(
+        "SELECT COALESCE(SUM(final_amount), 0) as s FROM tractor_jobs WHERE driver_id = ? AND status = 'COMPLETED'",
+        (uid,)
+    ).fetchone()
+    driver_total_earnings = round(float(driver_earnings_row['s'] or 0.0), 2)
+
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'summary': {
+            'farmer': {
+                'active_jobs': farmer_active,
+                'completed_jobs': farmer_completed,
+                'pending_confirmations': farmer_pending,
+                'month_expenses': month_tractor_expenses,
+                'total_expenses': total_tractor_expenses,
+                'current_month': current_month
+            },
+            'driver': {
+                'active_jobs': driver_active,
+                'completed_jobs': driver_completed,
+                'pending_requests': driver_pending,
+                'total_earnings': driver_total_earnings
+            }
+        }
+    })
 
 
 if __name__ == '__main__':

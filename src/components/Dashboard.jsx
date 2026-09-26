@@ -11,20 +11,29 @@ import {
   CheckCircle2,
   Bot,
   Sparkles,
+  BookOpen,
+  TrendingDown,
+  TrendingUp,
+  Scale,
+  ArrowRight,
+  Tractor,
 } from 'lucide-react';
 import FarmScene from './FarmScene';
-import { getPlants, getWeather } from '../services/apiService';
+import { getPlants, getWeather, getFarmSummary, getTractorSummary } from '../services/apiService';
 
 const DEFAULT_LOC = { latitude: 17.385, longitude: 78.487 };
 
 export default function Dashboard({
   user,
   onOpenScanner,
+  setActiveTab,
 }) {
   const [plantCount, setPlantCount] = useState(0);
   const [loadingPlants, setLoadingPlants] = useState(true);
   const [weatherData, setWeatherData] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(true);
+  const [farmSummary, setFarmSummary] = useState(null);
+  const [tractorSummary, setTractorSummary] = useState(null);
 
   // Load actual plants count
   useEffect(() => {
@@ -61,6 +70,32 @@ export default function Dashboard({
       .finally(() => {
         if (isMounted) setLoadingWeather(false);
       });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Load farm diary summary stats
+  useEffect(() => {
+    let isMounted = true;
+    getFarmSummary()
+      .then((res) => {
+        if (isMounted && res?.success && res.summary) {
+          setFarmSummary(res.summary);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load farm diary summary in dashboard:', err);
+      });
+
+    getTractorSummary()
+      .then((res) => {
+        if (isMounted && res?.success && res.summary) {
+          setTractorSummary(res.summary);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load tractor summary in dashboard:', err);
+      });
+
     return () => { isMounted = false; };
   }, []);
 
@@ -397,6 +432,178 @@ export default function Dashboard({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
                 <Sparkles size={13} />
                 <span>Contextual assistance available</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Section 4: 📒 Farm Diary & Expenses */}
+          <div
+            className="card"
+            style={{
+              padding: '1.4rem',
+              borderRadius: 'var(--radius-xl)',
+              background: 'var(--surface)',
+              cursor: 'pointer',
+              transition: 'box-shadow 180ms ease, transform 180ms ease'
+            }}
+            onClick={() => setActiveTab && setActiveTab('diary')}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: 10,
+                  background: 'var(--success-bg)', color: 'var(--primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <BookOpen size={20} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
+                    Financial & Daily Log
+                  </span>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    📒 Farm Diary
+                  </h2>
+                </div>
+              </div>
+
+              <span style={{
+                fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)',
+                display: 'inline-flex', alignItems: 'center', gap: '0.2rem'
+              }}>
+                Open Diary <ArrowRight size={13} />
+              </span>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block' }}>
+                    Net Balance:
+                  </span>
+                  <span style={{
+                    fontSize: '1.6rem', fontWeight: 900,
+                    color: (farmSummary?.net_balance || 0) >= 0 ? 'var(--primary)' : 'var(--danger)',
+                    lineHeight: 1
+                  }}>
+                    {farmSummary ? `₹${(farmSummary.net_balance || 0).toLocaleString('en-IN')}` : '₹0'}
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block' }}>
+                    Diary Entries:
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {farmSummary?.diary_count ?? 0}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.5rem',
+                fontSize: '0.78rem',
+                color: 'var(--text-secondary)',
+                borderTop: '1px solid var(--border)',
+                paddingTop: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <TrendingDown size={13} style={{ color: 'var(--danger)' }} />
+                  <span>Expenses: ₹{(farmSummary?.total_expenses || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <TrendingUp size={13} style={{ color: 'var(--primary)' }} />
+                  <span>Income: ₹{(farmSummary?.total_income || 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Section 5: 🚜 Tractor Work Tracker */}
+          <div
+            className="card"
+            style={{
+              padding: '1.4rem',
+              borderRadius: 'var(--radius-xl)',
+              background: 'var(--surface)',
+              cursor: 'pointer',
+              transition: 'box-shadow 180ms ease, transform 180ms ease'
+            }}
+            onClick={() => setActiveTab && setActiveTab('tractor')}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: 10,
+                  background: 'color-mix(in srgb, var(--primary) 12%, transparent)', color: 'var(--primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Tractor size={20} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
+                    Phase 2 Module
+                  </span>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    🚜 Tractor Work
+                  </h2>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)' }}>
+                <span>Open Tracker</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                marginBottom: '0.6rem'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block' }}>
+                    Active / Running:
+                  </span>
+                  <span style={{
+                    fontSize: '1.6rem', fontWeight: 900,
+                    color: (tractorSummary?.farmer?.active_jobs || 0) > 0 ? 'var(--primary)' : 'var(--text-primary)',
+                    lineHeight: 1
+                  }}>
+                    {tractorSummary?.farmer?.active_jobs ?? 0}
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block' }}>
+                    Completed:
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {tractorSummary?.farmer?.completed_jobs ?? 0}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.5rem',
+                fontSize: '0.78rem',
+                color: 'var(--text-secondary)',
+                borderTop: '1px solid var(--border)',
+                paddingTop: '0.65rem'
+              }}>
+                <div>
+                  <span>Pending: {tractorSummary?.farmer?.pending_confirmations ?? 0}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span>Expenses: ₹{(tractorSummary?.farmer?.month_expenses || 0).toLocaleString('en-IN')}</span>
+                </div>
               </div>
             </div>
           </div>

@@ -11,11 +11,15 @@ import {
   User,
   LogOut,
   Wrench,
+  BookOpen,
+  Tractor,
 } from 'lucide-react';
 
 const navItems = [
   { id: 'dashboard', label: 'Home', mobileLabel: 'Home', icon: Home },
   { id: 'plants',    label: 'My Plants', mobileLabel: 'Plants', icon: Sprout },
+  { id: 'diary',     label: 'Farm Diary', mobileLabel: 'Diary', icon: BookOpen },
+  { id: 'tractor',   label: 'Tractor Work', mobileLabel: 'Tractor', icon: Tractor },
   { id: 'scanner',   label: 'Scan Plant', mobileLabel: 'Scan', icon: Camera, isPrimary: true },
   { id: 'weather',   label: 'Weather', mobileLabel: 'Weather', icon: CloudSun },
   { id: 'chat',      label: 'Farmer AI', mobileLabel: 'AI', icon: Bot },
@@ -290,7 +294,7 @@ export default function Navbar({
           height: 'var(--bottom-nav-height)',
           background: 'var(--surface)',
           borderTop: '1px solid var(--border)',
-          gridTemplateColumns: 'repeat(6, 1fr)',
+          gridTemplateColumns: `repeat(${navItems.length}, 1fr)`,
           alignItems: 'center',
           zIndex: 50,
           boxShadow: '0 -2px 10px rgba(0,0,0,0.06)'

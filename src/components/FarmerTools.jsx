@@ -139,9 +139,23 @@ export default function FarmerTools({ onNavigateTab }) {
         >
           Farmer Tools
         </h1>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, maxWidth: 650 }}>
-          Practical advisory, scientific nutrient calculations, verified government assistance, and essential farming knowledge.
-        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.35rem' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, maxWidth: 650 }}>
+            Practical advisory, scientific nutrient calculations, verified government assistance, and essential farming knowledge.
+          </p>
+          <button
+            onClick={() => onNavigateTab && onNavigateTab('diary')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+              padding: '0.45rem 0.95rem', borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--surface)',
+              color: 'var(--primary)', fontSize: '0.825rem', fontWeight: 800,
+              cursor: 'pointer', boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            <span>📒</span> Farm Diary + Expenses →
+          </button>
+        </div>
       </div>
 
       {/* ─── Sub-Tab Navigation Bar (Horizontal Scroll on Mobile) ─── */}

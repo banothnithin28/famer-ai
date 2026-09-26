@@ -7,14 +7,14 @@ function apiUrl(endpoint) {
 }
 
 async function request(endpoint, options = {}) {
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {})
-  };
+  const headers = { ...(options.headers || {}) };
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(apiUrl(endpoint), {
     ...options,
-    headers: defaultHeaders,
+    headers,
     credentials: 'include'
   });
 
@@ -155,4 +155,193 @@ export async function deleteScan(scanId) {
     method: 'DELETE'
   });
 }
+
+// 8. Farm Diary + Expenses APIs
+export async function getFarmDiary(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+  const qs = query.toString();
+  return request(`/api/farm-diary${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+export async function createDiaryEntry(diaryData) {
+  const isFormData = diaryData instanceof FormData;
+  return request('/api/farm-diary', {
+    method: 'POST',
+    body: isFormData ? diaryData : JSON.stringify(diaryData)
+  });
+}
+
+export async function updateDiaryEntry(entryId, diaryData) {
+  const isFormData = diaryData instanceof FormData;
+  return request(`/api/farm-diary/${entryId}`, {
+    method: 'PUT',
+    body: isFormData ? diaryData : JSON.stringify(diaryData)
+  });
+}
+
+export async function deleteDiaryEntry(entryId) {
+  return request(`/api/farm-diary/${entryId}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function getExpenses(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+  const qs = query.toString();
+  return request(`/api/expenses${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+export async function createExpense(expenseData) {
+  const isFormData = expenseData instanceof FormData;
+  return request('/api/expenses', {
+    method: 'POST',
+    body: isFormData ? expenseData : JSON.stringify(expenseData)
+  });
+}
+
+export async function updateExpense(expenseId, expenseData) {
+  const isFormData = expenseData instanceof FormData;
+  return request(`/api/expenses/${expenseId}`, {
+    method: 'PUT',
+    body: isFormData ? expenseData : JSON.stringify(expenseData)
+  });
+}
+
+export async function deleteExpense(expenseId) {
+  return request(`/api/expenses/${expenseId}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function getIncome(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+  const qs = query.toString();
+  return request(`/api/income${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+export async function createIncome(incomeData) {
+  return request('/api/income', {
+    method: 'POST',
+    body: JSON.stringify(incomeData)
+  });
+}
+
+export async function updateIncome(incomeId, incomeData) {
+  return request(`/api/income/${incomeId}`, {
+    method: 'PUT',
+    body: JSON.stringify(incomeData)
+  });
+}
+
+export async function deleteIncome(incomeId) {
+  return request(`/api/income/${incomeId}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function getFarmSummary() {
+  return request('/api/farm-summary', { method: 'GET' });
+}
+
+// 9. Tractor Work Tracker APIs (Phase 2)
+export async function getTractorJobs(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+  const qs = query.toString();
+  return request(`/api/tractor/jobs${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+export async function createTractorJob(jobData) {
+  return request('/api/tractor/jobs', {
+    method: 'POST',
+    body: JSON.stringify(jobData)
+  });
+}
+
+export async function getTractorJob(identifier) {
+  return request(`/api/tractor/jobs/${encodeURIComponent(identifier)}`, { method: 'GET' });
+}
+
+export async function joinTractorJob(identifier) {
+  return request(`/api/tractor/jobs/${encodeURIComponent(identifier)}/join`, {
+    method: 'POST'
+  });
+}
+
+export async function startTractorJob(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/start`, {
+    method: 'POST'
+  });
+}
+
+export async function confirmStartTractorJob(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/confirm-start`, {
+    method: 'POST'
+  });
+}
+
+export async function pauseTractorJob(jobId, notes = '') {
+  return request(`/api/tractor/jobs/${jobId}/pause`, {
+    method: 'POST',
+    body: JSON.stringify({ notes })
+  });
+}
+
+export async function resumeTractorJob(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/resume`, {
+    method: 'POST'
+  });
+}
+
+export async function finishTractorJob(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/finish`, {
+    method: 'POST'
+  });
+}
+
+export async function confirmFinishTractorJob(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/confirm-finish`, {
+    method: 'POST'
+  });
+}
+
+export async function disputeTractorJob(jobId, reason, description = '') {
+  return request(`/api/tractor/jobs/${jobId}/dispute`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, description })
+  });
+}
+
+export async function resolveDisputeTractorJob(jobId, resolution, next_status = 'RUNNING') {
+  return request(`/api/tractor/jobs/${jobId}/resolve-dispute`, {
+    method: 'POST',
+    body: JSON.stringify({ resolution, next_status })
+  });
+}
+
+export async function addTractorToExpenses(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/add-to-expenses`, {
+    method: 'POST'
+  });
+}
+
+export async function getTractorJobEvents(jobId) {
+  return request(`/api/tractor/jobs/${jobId}/events`, { method: 'GET' });
+}
+
+export async function getTractorSummary() {
+  return request('/api/tractor/summary', { method: 'GET' });
+}
+
 

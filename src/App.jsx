@@ -8,6 +8,8 @@ import DiseaseScanner from './components/DiseaseScanner';
 import WeatherAdvisor from './components/WeatherAdvisor';
 import AIChatbot from './components/AIChatbot';
 import FarmerTools from './components/FarmerTools';
+import FarmDiary from './components/FarmDiary';
+import TractorTracker from './components/TractorTracker';
 import AuthModal from './components/AuthModal';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
@@ -290,6 +292,22 @@ export default function App() {
         {/* 6. Farmer Tools (🧰 Farmer Tools) */}
         {activeTab === 'tools' && (
           <FarmerTools onNavigateTab={(tab) => navigateTo(tab)} />
+        )}
+
+        {/* 7. Farm Diary + Expenses (📒 Farm Diary) */}
+        {activeTab === 'diary' && (
+          <FarmDiary
+            user={user}
+            initialTab="overview"
+          />
+        )}
+
+        {/* 8. Tractor Work Tracker (🚜 Tractor Work) */}
+        {activeTab === 'tractor' && (
+          <TractorTracker
+            user={user}
+            onNavigateToDiary={() => navigateTo('diary')}
+          />
         )}
 
       </main>
