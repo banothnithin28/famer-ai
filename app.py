@@ -42,7 +42,8 @@ from google.genai import types
 from database.init_db import init_db
 
 # Load environment variables from .env file
-load_dotenv()
+_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(_env_path)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'fallback_dev_secret_change_in_production')
@@ -372,6 +373,21 @@ GOVERNMENT AGRICULTURAL SCHEMES REFERENCE (India / Telangana):
 - PM Krishi Sinchayee Yojana (PMKSY): Subsidies for micro-irrigation (drip and sprinkler systems).
 """
 
+def get_gemini_client():
+    global gemini_client, _GEMINI_API_KEY
+    if gemini_client:
+        return gemini_client
+    _GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    if _GEMINI_API_KEY:
+        try:
+            gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
+            return gemini_client
+        except Exception as _e:
+            app.logger.warning(f"Failed to initialize Gemini client: {_e}")
+            return None
+    return None
+
+# Attempt initial setup
 if _GEMINI_API_KEY:
     try:
         gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
@@ -381,7 +397,7 @@ if _GEMINI_API_KEY:
         print(f"[WARN] Failed to initialize Gemini client: {_e}")
 else:
     gemini_client = None
-    print("[WARN] GEMINI_API_KEY not set — chatbot will report service unavailable")
+    print("[WARN] GEMINI_API_KEY not set — chatbot will use regional agronomist baseline")
 
 
 chat_rate_limit = {}
@@ -2155,7 +2171,8 @@ def chat_response(data):
     reply = None
     last_error = None
 
-    if gemini_client:
+    active_client = get_gemini_client()
+    if active_client:
         contents = format_gemini_contents(data.get('history', []), message)
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -2165,7 +2182,7 @@ def chat_response(data):
 
         for model_name in _CANDIDATE_GEMINI_MODELS:
             try:
-                response = gemini_client.models.generate_content(
+                response = active_client.models.generate_content(
                     model=model_name,
                     contents=contents,
                     config=gen_config,
