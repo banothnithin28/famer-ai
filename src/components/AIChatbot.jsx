@@ -82,7 +82,7 @@ export default function AIChatbot({ plantId = null }) {
         {
           id: Date.now() + 1,
           sender: 'ai',
-          text: err?.message || 'Farmer AI is temporarily unavailable. Please verify your connection or ask again.',
+          text: err?.message || 'Unable to connect to Farmer AI. Please check your network connection and make sure the server is reachable.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);

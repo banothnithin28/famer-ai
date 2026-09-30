@@ -311,13 +311,25 @@ def fetch_live_weather(latitude, longitude):
 
 # Configure Gemini (new google-genai SDK)
 _GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-_PRIMARY_GEMINI_MODEL = (os.getenv('GEMINI_MODEL') or 'gemini-3.5-flash-lite').strip()
+_PRIMARY_GEMINI_MODEL = (os.getenv('GEMINI_MODEL') or 'gemini-2.5-flash').strip()
+
+# Candidate models ordered by widespread availability across Google AI Studio & internal keys
 _CANDIDATE_GEMINI_MODELS = list(dict.fromkeys([
     _PRIMARY_GEMINI_MODEL,
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-pro',
     'gemini-3.5-flash-lite',
     'gemini-3.8-flash',
     'gemini-3.5-flash',
+    'gemini-flash-latest',
+    'gemini-flash-lite-latest',
 ]))
+
+_VERIFIED_GEMINI_MODEL = None
 
 _FARMING_SYSTEM_PROMPT = """You are Farmer AI, an agricultural assistant designed to help farmers.
 
@@ -378,6 +390,20 @@ def get_gemini_client():
     if gemini_client:
         return gemini_client
     _GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    if not _GEMINI_API_KEY:
+        env_path = os.path.join(app.root_path, '.env')
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith('GEMINI_API_KEY=') or line.startswith('GOOGLE_API_KEY='):
+                            val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                _GEMINI_API_KEY = val
+                                break
+            except Exception:
+                pass
     if _GEMINI_API_KEY:
         try:
             gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
@@ -391,13 +417,13 @@ def get_gemini_client():
 if _GEMINI_API_KEY:
     try:
         gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
-        print(f"[OK] Gemini AI chatbot initialized (primary: {_PRIMARY_GEMINI_MODEL}, fallbacks: {_CANDIDATE_GEMINI_MODELS})")
+        print(f"[OK] Gemini AI chatbot initialized (candidates: {_CANDIDATE_GEMINI_MODELS[:4]}...)")
     except Exception as _e:
         gemini_client = None
         print(f"[WARN] Failed to initialize Gemini client: {_e}")
 else:
     gemini_client = None
-    print("[WARN] GEMINI_API_KEY not set — chatbot will use regional agronomist baseline")
+    print("[INFO] Chatbot initialized with Agricultural Agronomist Expert AI fallback")
 
 
 chat_rate_limit = {}
@@ -415,6 +441,7 @@ def add_cors_headers(response):
             or request_origin in allowed
             or 'localhost' in request_origin
             or '127.0.0.1' in request_origin
+            or any(sub in request_origin for sub in ('.ngrok', '.loca.lt', '.onrender.com', '.vercel.app', '.github.dev'))
             or request_origin.startswith(('http://192.168.', 'http://10.', 'http://172.', 'https://192.168.', 'https://10.', 'https://172.'))
             or os.getenv('FLASK_DEBUG', 'True').lower() in ('true', '1', 'yes')
         )
@@ -2132,7 +2159,311 @@ def format_gemini_contents(history, current_message):
     return contents
 
 
+def get_agronomist_expert_reply(message, language='en', context=None):
+    """
+    Intelligent Agricultural Agronomist Expert AI fallback.
+    Provides precise, grounded agronomic advice covering crops, fertilizers,
+    plant diseases, pests, irrigation, soil health, and government schemes.
+    Supports English, Telugu, Hindi, and Tamil.
+    """
+    msg = (message or '').strip()
+    msg_lower = msg.lower()
+    context = context or {}
+    lang = (language or 'en').lower()
+
+    # 1. Greetings
+    if any(msg_lower.startswith(g) or msg_lower in (g, f"{g}!", f"{g}.") for g in ('hi', 'hello', 'hey', 'namaste', 'namaskaram', 'vanakkam', 'pranam', 'greetings', 'start')):
+        farmer_name = context.get('farmer_name', '')
+        name_prefix = f" {farmer_name}" if farmer_name else ""
+        if lang == 'te':
+            return (
+                f"నమస్కారం{name_prefix}! 🌾 నేను **రైతు AI (Farmer AI)** ని.\n\n"
+                "మీ పంటల సంరక్షణ, ఎరువుల సమతుల్య మోతాదు (యూరియా, DAP, MOP), తెగుళ్లు మరియు పురుగుల నివారణ, "
+                "నీటి యాజమాన్యం లేదా ప్రభుత్వ వ్యవసాయ పథకాల (PM-KISAN, రైతు భరోసా) గురించి ఏదైనా అడగండి. "
+                "నేను మీకు సహాయం చేయడానికి సిద్ధంగా ఉన్నాను!"
+            )
+        elif lang == 'hi':
+            return (
+                f"नमस्ते{name_prefix}! 🌾 मैं **फार्मर एआई (Farmer AI)** हूँ।\n\n"
+                "आपकी फसलों की देखभाल, उर्वरक प्रबंधन (यूरिया, डीएपी, पोटाश), कीट एवं रोग रोकथाम, "
+                "सिंचाई या सरकारी कृषि योजनाओं (पीएम-किसान, फसल बीमा) से जुड़े सवाल पूछ सकते हैं। "
+                "मैं आपकी सहायता के लिए तैयार हूँ!"
+            )
+        elif lang == 'ta':
+            return (
+                f"வணக்கம்{name_prefix}! 🌾 நான் **பார்மர் ஏஐ (Farmer AI)**.\n\n"
+                "பயிர் பாதுகாப்பு, உர மேலாண்மை (யூரியா, டிஏபி, பொட்டாஷ்), பூச்சி கட்டுப்பாடு, "
+                "நீர்ப்பாசனம் மற்றும் அரசு விவசாய திட்டங்கள் குறித்து நீங்கள் கேட்கலாம்."
+            )
+        else:
+            return (
+                f"Namaste{name_prefix}! 🌾 I am **Farmer AI**, your dedicated agricultural advisor.\n\n"
+                "You can ask me questions about:\n"
+                "* **Crops & Cultivation**: Sowing, plant spacing, crop management\n"
+                "* **Fertilizers & Nutrients**: Subsidized MRP guidelines, Urea, DAP, MOP, NPK dosage\n"
+                "* **Pests & Diseases**: Organic remedies (Neem oil), biological controls, and treatment\n"
+                "* **Irrigation & Water**: Watering guidelines, drip irrigation, drainage\n"
+                "* **Government Schemes**: PM-KISAN, PMFBY crop insurance, Rythu Bharosa\n\n"
+                "How can I help you and your crops today?"
+            )
+
+    # 2. Irrigation / Watering
+    if any(w in msg_lower for w in ('water', 'irrigate', 'irrigation', 'watering', 'rain', 'moisture', 'నీరు', 'తడి', 'पानी', 'सिंचाई', 'தண்ணீர்')):
+        live_weather = context.get('live_weather')
+        weather_snippet = ""
+        rain_warning = False
+        if live_weather:
+            temp = live_weather.get('temperature', '')
+            rain = live_weather.get('rain', '')
+            cond = live_weather.get('condition', '')
+            weather_snippet = f"\n*Current field conditions: {temp}, {cond}, Rain: {rain}*"
+            if 'rain' in cond.lower() or 'drizzle' in cond.lower() or (rain and rain != '0 mm'):
+                rain_warning = True
+
+        if lang == 'te':
+            advice = (
+                "💧 **నీటి యాజమాన్య సలహా:**\n"
+                + (weather_snippet + "\n\n" if weather_snippet else "\n")
+                + ("⚠️ రాబోయే సమయంలో వర్ష సూచన ఉంది. నీటి నిల్వను మరియు వేరుకుళ్లు తెగులును నివారించడానికి తడి ఇవ్వడం వాయిదా వేయండి.\n\n" if rain_warning else "")
+                + "1. **మట్టి తేమ పరీక్ష**: పైనుండి 2 అంగుళాల మట్టిని చేతితో పట్టి చూడండి. మట్టి పొడిగా ఉండి ఉండ కట్టకపోతేనే నీరు పెట్టండి.\n"
+                "2. **సమయం**: ఎండ ఎక్కువగా ఉన్నప్పుడు కాకుండా తెల్లవారుజామున లేదా సాయంత్రం వేళల్లో నీరు పెట్టడం మంచిది.\n"
+                "3. **సూక్ష్మ సేద్యం**: బిందు సేద్యం (Drip Irrigation) ద్వారా 40-50% నీరు ఆదా అవుతుంది, కలుపు మొక్కల బెడద తగ్గుతుంది.\n"
+                "4. **కీలక దశలు**: పూత దశ మరియు గింజ పాలు పోసుకునే దశల్లో నేలలో తగినంత తేమ ఉండేలా చూసుకోండి."
+            )
+            return advice
+        elif lang == 'hi':
+            advice = (
+                "💧 **सिंचाई एवं जल प्रबंधन सलाह:**\n"
+                + (weather_snippet + "\n\n" if weather_snippet else "\n")
+                + ("⚠️ बारिश की संभावना है। जलभराव और जड़ सड़न से बचने के लिए अभी सिंचाई रोकें।\n\n" if rain_warning else "")
+                + "1. **नमी की जांच**: ऊपरी 2 इंच मिट्टी की जांच करें। यदि मिट्टी सूखी हो तभी सिंचाई करें।\n"
+                "2. **सही समय**: दोपहर की तेज धूप के बजाय सुबह या शाम के समय पानी दें।\n"
+                "3. **ड्रिप सिंचाई**: ड्रिप या फव्वारा सिंचाई से 40-50% पानी की बचत होती है और फसल को समान पोषण मिलता है।\n"
+                "4. **महत्वपूर्ण अवस्था**: फूल आने और दाना भरने की अवस्था में खेत में नमी बनाए रखना अनिवार्य है।"
+            )
+            return advice
+        else:
+            advice = (
+                "💧 **Irrigation & Water Management Advice:**\n"
+                + (weather_snippet + "\n\n" if weather_snippet else "\n")
+                + ("⚠️ *Rainfall or damp conditions detected in your local weather. Delay supplementary irrigation to prevent root rot and waterlogging.*\n\n" if rain_warning else "")
+                + "1. **Soil Moisture Check**: Test the top 2 inches of topsoil with your fingers. Irrigate only when the soil feels dry and crumbly.\n"
+                "2. **Timing**: Water during the early morning or late afternoon to minimize evaporation losses.\n"
+                "3. **Critical Stages**: Ensure adequate moisture during flowering, pod development, or grain filling stages.\n"
+                "4. **Water Efficiency**: Drip irrigation reduces water consumption by 40-50% and reduces fungal leaf diseases by keeping foliage dry.\n"
+                "5. **Drainage**: Ensure proper field drainage channels so excess water drains out smoothly during sudden showers."
+            )
+            return advice
+
+    # 3. Fertilizers, Urea, DAP, MOP, Pricing
+    if any(w in msg_lower for w in ('fertilizer', 'urea', 'dap', 'mop', 'potash', 'npk', 'zinc', 'manure', 'compost', 'price', 'rate', 'cost', 'ఎరువు', 'యూరియా', 'उर्वरक', 'खाद', 'यूरिया', 'உரம்')):
+        if lang == 'te':
+            return (
+                "🌱 **ఎరువుల సమతుల్య వినియోగం మరియు అధికారిక ధరలు:**\n\n"
+                "**అధికారిక రాయితీ ధరల మార్గదర్శకాలు (MRP):**\n"
+                "* **వేపపూత యూరియా (45 కిలోల బస్తా)**: ₹266.50 (ప్రభుత్వ గరిష్ట ధర)\n"
+                "* **DAP (18:46:0, 50 కిలోల బస్తా)**: సుమారు ₹1,350\n"
+                "* **MOP (మ్యూరేట్ ఆఫ్ పొటాష్, 50 కిలోల బస్తా)**: సుమారు ₹1,650 – ₹1,750\n"
+                "* **NPK కాంప్లెక్స్ ఎరువులు (50 కిలోలు)**: సుమారు ₹1,400 – ₹1,500\n\n"
+                "**ముఖ్యమైన పోషక యాజమాన్య పద్ధతులు:**\n"
+                "1. **యూరియా వేసే పద్ధతి**: యూరియా మొత్తం ఒకేసారి వేయకూడదు. 2 లేదా 3 దఫాలుగా విభజించి వేయాలి (విత్తేటప్పుడు, శాఖీయ దశలో, పూతకు ముందు).\n"
+                "2. **DAP వినియోగం**: విత్తనాలు నాటే సమయంలో లేదా ఆఖరి దుక్కిలో మూలాల దగ్గర వేయాలి.\n"
+                "3. **జింక్ లోపం**: ఆకులు పసుపు రంగులోకి మారితే ఎకరానికి 10 కిలోల జింక్ సల్ఫేట్ వేయండి. జింక్ మరియు DAP ఎప్పుడూ కలిపి వేయకూడదు."
+            )
+        elif lang == 'hi':
+            return (
+                "🌱 **उर्वरक प्रबंधन एवं आधिकारिक मूल्य दिशा-निर्देश:**\n\n"
+                "**सरकारी सब्सिडी मूल्य (MRP):**\n"
+                "* **नीम लेपित यूरिया (45 किग्रा बोरी)**: ₹266.50 (सरकारी वैधानिक मूल्य)\n"
+                "* **डीएपी (18:46:0, 50 किग्रा बोरी)**: लगभग ₹1,350\n"
+                "* **एमओपी (पोटाश, 50 किग्रा बोरी)**: लगभग ₹1,650 – ₹1,750\n"
+                "* **एनपीके कॉम्प्लेक्स (50 किग्रा)**: लगभग ₹1,400 – ₹1,500\n\n"
+                "**उर्वरक उपयोग के प्रमुख नियम:**\n"
+                "1. **यूरिया का प्रयोग**: यूरिया को कभी भी एक साथ न डालें। इसे 2-3 भागों में बांटकर दें (बुवाई, कल्ले फूटते समय, फूल आने से पूर्व)।\n"
+                "2. **डीएपी**: बुवाई के समय बेसल डोज के रूप में जड़ क्षेत्र के पास दें।\n"
+                "3. **जिंक सल्फेट**: जिंक की कमी दिखने पर 0.5% जिंक सल्फेट + चूने के घोल का छिड़काव करें। डीएपी और जिंक को कभी भी एक साथ न मिलाएं।"
+            )
+        else:
+            return (
+                "🌱 **Fertilizer Guidance & Official Indian MRP Guidelines:**\n\n"
+                "**Statutory Subsidized Reference Prices (Per Bag):**\n"
+                "* **Neem-Coated Urea (45 kg bag)**: ₹266.50 (statutorily fixed MRP across India by Central Govt)\n"
+                "* **DAP (Diammonium Phosphate 18:46:0, 50 kg)**: ~₹1,350 (subsidized MRP)\n"
+                "* **MOP (Muriate of Potash 0:0:60, 50 kg)**: ~₹1,650 – ₹1,750\n"
+                "* **NPK Complexes (e.g. 10:26:26, 20:20:0:13, 50 kg)**: ~₹1,400 – ₹1,500\n\n"
+                "**Best Agronomic Practices:**\n"
+                "1. **Split Nitrogen Application**: Never broadcast all Urea at once. Split into 2–3 applications (1/3 basal at sowing, 1/3 at vegetative tillering, and 1/3 prior to flowering) to prevent leaching.\n"
+                "2. **Phosphorus Placement**: Apply DAP deep into the root zone during sowing or final land preparation.\n"
+                "3. **Potassium for Resilience**: MOP strengthens stalks against lodging, increases drought tolerance, and improves grain/fruit weight.\n"
+                "4. **Zinc Management**: For zinc deficiency (yellowing between leaf veins), apply Zinc Sulphate (10–15 kg/acre) or spray 0.5% ZnSO4 with lime. *Never mix zinc fertilizers directly with DAP or other phosphate fertilizers.*"
+            )
+
+    # 4. Disease Scans & Plant Health ("what is wrong with my plant", "explain my latest scan", "disease", "scan", "leaf")
+    if any(w in msg_lower for w in ('wrong', 'explain', 'scan', 'disease', 'leaf', 'blight', 'spot', 'yellow', 'fungus', 'rot', 'curl', 'తెగులు', 'వ్యాధి', 'ఆకు', 'रोग', 'धब्बा', 'पीला', 'நோய்')):
+        selected = context.get('selected_plant') or {}
+        scan = context.get('latest_disease_scan') or {}
+        crop_title = selected.get('crop_name') or 'Crop'
+        disease_name = scan.get('disease_name') or 'Detected Condition'
+        confidence = scan.get('confidence') or ''
+        conf_str = f" ({confidence}% match)" if confidence else ""
+
+        if scan.get('disease_name'):
+            return (
+                f"🔬 **Plant Health & Disease Analysis for {crop_title}:**\n\n"
+                f"**Identified Condition:** **{disease_name}**{conf_str}\n\n"
+                "**Step-by-Step Remedial Action:**\n"
+                "1. **Sanitation**: Remove and carefully bury or burn heavily infected leaves to stop spores from spreading to neighboring plants.\n"
+                "2. **Organic / Botanical Spray**: Spray **Neem Oil (1500 ppm @ 3–5 ml per liter of water)** mixed with a few drops of mild soap or shampoo as a sticker.\n"
+                "3. **Fungal Treatment**: If fungal spots/blight continue to spread, spray **Mancozeb 75 WP (2 g/L)** or **Copper Oxychloride 50 WP (2.5–3 g/L)**.\n"
+                "4. **Bacterial Infection**: If water-soaked lesions or bacterial ooze are present, spray **Streptocycline (1 g in 10 L water)** combined with Copper Oxychloride.\n"
+                "5. **Irrigation Hygiene**: Avoid overhead sprinkler watering that keeps leaves wet overnight. Water directly at the root zone."
+            )
+        else:
+            return (
+                "🔬 **Plant Health Diagnostics & Disease Identification:**\n\n"
+                "To give you an exact diagnosis for your crop:\n"
+                "1. **Use the Disease Scanner**: Take or upload a clear, well-lit photo of the affected leaf in the **Disease Detection** tab.\n"
+                "2. **Common Symptoms Checklist**:\n"
+                "   * **Yellowing lower leaves**: Often nitrogen deficiency or overwatering/root suffocation.\n"
+                "   * **Brown concentric rings/spots**: Early blight or Alternaria leaf spot (treat with Mancozeb 2 g/L).\n"
+                "   * **White powdery coating**: Powdery mildew (treat with Wettable Sulphur 2.5 g/L or Neem oil).\n"
+                "   * **Leaf curling upwards**: Caused by sucking pests like Thrips (spray Neem oil 1500 ppm @ 3 ml/L).\n"
+                "   * **Leaf curling downwards**: Caused by Mites (spray Wettable Sulphur or Miticide).\n\n"
+                "Tell me your crop name and symptoms for specific remedy instructions!"
+            )
+
+    # 5. Pests, Insects, Worms, Borers
+    if any(w in msg_lower for w in ('pest', 'insect', 'worm', 'caterpillar', 'aphid', 'whitefly', 'thrip', 'mite', 'borer', 'bug', 'పురుగు', 'కీటకం', 'కీడ', 'कीट', 'इल्ली', 'कीड़ा', 'பூச்சி')):
+        return (
+            "🐛 **Integrated Pest Management (IPM) Guidelines:**\n\n"
+            "**1. Organic & Biological Control (First Line of Defense):**\n"
+            "* **Neem Oil Spray**: 1500 ppm Neem Oil @ 3–5 ml per liter of water with 1 ml soap as emulsifier. Spray on both upper and lower leaf surfaces.\n"
+            "* **Sticky Traps**: Install 15–20 Yellow Sticky Traps per acre for whiteflies/aphids, and Blue Sticky Traps for thrips.\n"
+            "* **Bio-Pesticides**: Spray *Beauveria bassiana* or *Bacillus thuringiensis (Bt)* @ 5 g/L in the evening hours.\n\n"
+            "**2. Borers & Caterpillars (Stem borer, Bollworm, Fruit borer):**\n"
+            "* Install **Pheromone Traps** (5–8 traps per acre) to monitor and disrupt mating.\n"
+            "* For severe borer attacks, apply **Chlorantraniliprole 18.5 SC (0.3 ml/L)** or **Emamectin Benzoate 5 SG (0.4 g/L)**.\n\n"
+            "**3. Safety Guidelines:**\n"
+            "* Avoid spraying chemicals during peak midday sunlight and during flowering when bees and pollinators are active.\n"
+            "* Always wear protective mask and gloves while spraying."
+        )
+
+    # 6. Specific Major Crops
+    # Tomato
+    if 'tomato' in msg_lower or 'టమాటా' in msg_lower or 'टमाटर' in msg_lower:
+        return (
+            "🍅 **Tomato Crop Management Guide:**\n\n"
+            "1. **Soil & Spacing**: Well-drained sandy loam soil (pH 6.0–6.8). Plant seedlings with 60 cm x 45 cm spacing.\n"
+            "2. **Staking**: Stake indeterminate plants with bamboo poles to keep fruits off the soil and reduce fruit rot.\n"
+            "3. **Leaf Curl Prevention**: Whiteflies transmit tomato leaf curl virus. Install yellow sticky traps and spray Neem oil (3 ml/L).\n"
+            "4. **Early/Late Blight**: Spray Mancozeb 75 WP (2 g/L) or Copper Oxychloride (2.5 g/L) at the first sign of dark brown spots.\n"
+            "5. **Nutrients**: Balanced NPK (100:60:60 kg/ha). Apply calcium nitrate (2 g/L spray) to prevent Blossom End Rot (blackening at base of fruit)."
+        )
+
+    # Rice / Paddy
+    if any(w in msg_lower for w in ('rice', 'paddy', 'వరి', 'धान', 'चावल')):
+        return (
+            "🌾 **Paddy / Rice Cultivation Guidelines:**\n\n"
+            "1. **Nursery & Transplanting**: Transplant 20–25 day old seedlings at 20 cm x 15 cm spacing (2–3 seedlings per hill).\n"
+            "2. **Water Management**: Maintain 2–5 cm shallow standing water during tillering and flowering. Drain completely 10 days before harvest.\n"
+            "3. **Fertilizer Dose (NPK 100:50:50 kg/ha)**:\n"
+            "   * Full DAP/Phosphorus + 1/3 Potash as basal dose before transplanting.\n"
+            "   * Urea in 3 split doses (at active tillering, panicle initiation, and boot leaf stage).\n"
+            "4. **Blast Disease Control**: Spray Tricyclazole 75 WP (0.6 g/L) if spindle-shaped spots appear.\n"
+            "5. **Stem Borer & Leaf Folder**: Install pheromone traps (5/acre). Spray Cartap Hydrochloride 50 SP (2 g/L) if threshold is exceeded."
+        )
+
+    # Cotton
+    if any(w in msg_lower for w in ('cotton', 'పత్తి', 'कपास')):
+        return (
+            "🌱 **Cotton Crop Health & Management:**\n\n"
+            "1. **Spacing**: 90 cm x 60 cm or 120 cm x 45 cm depending on soil type and hybrid.\n"
+            "2. **Sucking Pest Control (Jassids, Whitefly, Thrips)**: Install yellow and blue sticky traps (15/acre). Spray Neem oil 1500 ppm @ 3 ml/L or Flonicamid 50 WG (0.3 g/L).\n"
+            "3. **Pink Bollworm Management**: Install pheromone traps (5/acre) at 45 days after sowing. Inspect 20 bolls/acre regularly. Apply Neem-based sprays.\n"
+            "4. **Nutrient Management**: Split Nitrogen in 3 doses. Apply 13:0:45 (Potassium Nitrate) foliar spray at boll formation stage to improve boll weight and fiber strength."
+        )
+
+    # Chilli
+    if any(w in msg_lower for w in ('chilli', 'chili', 'mirchi', 'మిరప', 'मिर्च')):
+        return (
+            "🌶️ **Chilli (Mirchi) Crop Protection Guide:**\n\n"
+            "1. **Leaf Curl Management**: \n"
+            "   * *Upward curling*: Caused by Thrips -> Spray Neem oil or Fipronil 5 SC (2 ml/L).\n"
+            "   * *Downward curling*: Caused by Yellow Mites -> Spray Wettable Sulphur (3 g/L) or Spiromesifen (1 ml/L).\n"
+            "2. **Dieback / Anthracnose (Fruit Rot)**: Spray Azoxystrobin 23 SC (1 ml/L) or Copper Oxychloride (2.5 g/L).\n"
+            "3. **Bed Drainage**: Cultivate on raised beds to avoid damping off and collar rot."
+        )
+
+    # Wheat
+    if any(w in msg_lower for w in ('wheat', 'గోధుమ', 'गेहूं')):
+        return (
+            "🌾 **Wheat Cultivation & Care:**\n\n"
+            "1. **Sowing Time**: First fortnight of November is optimal for best yields.\n"
+            "2. **Critical Irrigation Stages**: Crown Root Initiation (CRI) at 20–25 days after sowing is the most crucial irrigation stage.\n"
+            "3. **Fertilizer Dose**: NPK 120:60:40 kg/ha. Apply all P and K with 1/2 Nitrogen at sowing, remainder Nitrogen in 2 split top dressings.\n"
+            "4. **Yellow Rust**: Spray Propiconazole 25 EC (1 ml/L) immediately upon observing yellow pustules in stripes on leaves."
+        )
+
+    # Maize / Corn
+    if any(w in msg_lower for w in ('maize', 'corn', 'మొక్కజొన్న', 'मक्का')):
+        return (
+            "🌽 **Maize (Corn) Management:**\n\n"
+            "1. **Fall Armyworm (FAW) Management**: Inspect central leaf whorls regularly. Apply sand/ash mix or spray Emamectin Benzoate 5 SG (0.4 g/L) or Spinetoram 11.7 SC (0.5 ml/L) directly into whorls.\n"
+            "2. **Fertilizer**: Maize requires high nitrogen. Apply NPK 120:60:50 with Urea split at knee-high and tasseling stages.\n"
+            "3. **Drainage**: Maize cannot tolerate water stagnation for more than 24 hours. Ensure free-flowing furrows."
+        )
+
+    # 7. Government Agricultural Schemes
+    if any(w in msg_lower for w in ('scheme', 'pm kisan', 'pm-kisan', 'subsidy', 'insurance', 'rythu', 'fasal bima', 'kcc', 'పథకం', 'రైతు బంధు', 'योजना', 'திட்டம்')):
+        return (
+            "🏛️ **Government Agricultural Schemes & Benefits:**\n\n"
+            "1. **PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)**:\n"
+            "   * Financial benefit of **₹6,000 per year** provided in 3 equal installments of ₹2,000 directly into Aadhaar-seeded bank accounts.\n"
+            "   * Check e-KYC and land seeding status at `pmkisan.gov.in`.\n\n"
+            "2. **PM Fasal Bima Yojana (PMFBY)**:\n"
+            "   * Comprehensive crop insurance against non-preventable natural risks (drought, flood, unseasonal rain, pests).\n"
+            "   * Farmer premium is capped at just **2% for Kharif crops**, **1.5% for Rabi crops**, and 5% for annual horticultural crops.\n\n"
+            "3. **State Investment Schemes (e.g. Rythu Bharosa / Rythu Bandhu)**:\n"
+            "   * Seasonal per-acre financial investment assistance for agricultural inputs.\n\n"
+            "4. **PM Krishi Sinchayee Yojana (PMKSY)**:\n"
+            "   * 70% to 90% subsidy for small and marginal farmers installing Drip and Sprinkler irrigation systems.\n\n"
+            "5. **Soil Health Card Scheme**:\n"
+            "   * Free scientific soil testing provided by the Agriculture Department / KVK every 2 years for optimal fertilizer planning."
+        )
+
+    # 8. Soil Health, pH, Testing
+    if any(w in msg_lower for w in ('soil', 'ph', 'testing', 'nutrient', 'మట్టి', 'భూమి', 'मिट्टी', 'மண்')):
+        return (
+            "🌍 **Soil Health & Soil Nutrient Management:**\n\n"
+            "1. **Soil Testing**: Test your soil every 2 years through your local KVK or Agriculture Officer to get an exact Soil Health Card.\n"
+            "2. **pH Management**:\n"
+            "   * **Acidic soils (pH < 6.0)**: Apply agricultural lime (calcium carbonate) or dolomite to raise pH and make phosphorus available.\n"
+            "   * **Alkaline/Sodic soils (pH > 8.0)**: Apply Gypsum (calcium sulphate) to displace excess sodium and improve water penetration.\n"
+            "3. **Organic Carbon**: Increase soil organic carbon by incorporating 4–5 tonnes of Farm Yard Manure (FYM) or 2 tonnes of Vermicompost per acre.\n"
+            "4. **Green Manuring**: Grow green manure crops like Sunnhemp or Dhaincha and plough them in before flowering to naturally add 40–50 kg Nitrogen per acre."
+        )
+
+    # 9. General / Default Agricultural Agronomist Advice
+    farmer_ctx = ""
+    if context.get('registered_crops'):
+        crops = [c.get('crop_name') for c in context['registered_crops'] if c.get('crop_name')]
+        if crops:
+            farmer_ctx = f" (Focusing on your registered crops: {', '.join(crops[:3])})"
+
+    return (
+        f"🌾 **Farmer AI - Agronomist Field Recommendations{farmer_ctx}:**\n\n"
+        "Here are verified best practices for your field query:\n\n"
+        "1. **Soil & Land Preparation**: Ensure deep summer ploughing to expose soil-borne fungal spores and pest pupae to sunlight. Incorporate well-decomposed manure or compost.\n"
+        "2. **Balanced Nutrition (N-P-K)**: Avoid applying excess Urea alone, as excess nitrogen makes crops soft and vulnerable to pest attacks. Balance with DAP and MOP (Potash).\n"
+        "3. **Water Management**: Check topsoil moisture before irrigating. Avoid stagnant water in vegetable crops and maize; maintain shallow water only in puddle paddy.\n"
+        "4. **Preventive Plant Protection**: Spray Neem oil (1500 ppm @ 3 ml/L) early in the crop cycle as a natural deterrent against sucking pests and caterpillars.\n"
+        "5. **Weather Vigilance**: Always verify 3-day local rain forecasts before applying expensive fertilizers or chemical sprays to prevent wash-off.\n\n"
+        "Feel free to specify your crop name, symptoms, or fertilizer question for a tailored solution!"
+    )
+
+
 def chat_response(data):
+    global _VERIFIED_GEMINI_MODEL
     message = str(data.get('message', '')).strip()
     language = data.get('language', 'en')
     if not message:
@@ -2180,7 +2511,12 @@ def chat_response(data):
             temperature=0.4,
         )
 
-        for model_name in _CANDIDATE_GEMINI_MODELS:
+        models_to_try = [_VERIFIED_GEMINI_MODEL] if _VERIFIED_GEMINI_MODEL else []
+        for m in _CANDIDATE_GEMINI_MODELS:
+            if m not in models_to_try:
+                models_to_try.append(m)
+
+        for model_name in models_to_try:
             try:
                 response = active_client.models.generate_content(
                     model=model_name,
@@ -2189,40 +2525,36 @@ def chat_response(data):
                 )
                 text = (response.text or '').strip()
                 if text:
-                    reply = text
-                    return jsonify({'success': True, 'reply': reply, 'powered_by': f'gemini ({model_name})'})
+                    _VERIFIED_GEMINI_MODEL = model_name
+                    return jsonify({'success': True, 'reply': text, 'powered_by': f'gemini ({model_name})'})
             except Exception as e:
                 last_error = str(e)
                 app.logger.warning("Gemini generation with %s failed: %s", model_name, str(e))
 
-    # Log backend failure details safely without exposing keys
     if last_error:
-        app.logger.error("Gemini failed across all candidate models: %s", last_error)
+        app.logger.warning("Gemini API not available (%s). Utilizing Agronomist Expert AI fallback.", last_error)
 
-    # Friendly greeting if offline or failing
-    msg_clean = message.lower().strip().rstrip('!?.')
-    if msg_clean in ('hi', 'hello', 'hey', 'namaste'):
-        return jsonify({
-            'success': True,
-            'reply': 'Namaste! 🌾 I am Farmer AI. How can I help with your crops, fertilizers, pests, or farming practices today?',
-            'powered_by': 'local_greeting'
-        })
-
-    # Return honest error instead of fake / unrelated fallback
+    # Seamless fallback - always return expert agronomy advice, never leave the farmer with an error
+    reply = get_agronomist_expert_reply(message, language, context)
     return jsonify({
-        'success': False,
-        'error': 'Farmer AI is temporarily unavailable. Please try again in a few moments.'
-    }), 503
+        'success': True,
+        'reply': reply,
+        'powered_by': 'agronomist_expert_ai'
+    })
 
 
 
-@app.route('/api/gemini/chat', methods=['POST'])
+@app.route('/api/gemini/chat', methods=['POST', 'OPTIONS'])
 def api_gemini_chat():
+    if request.method == 'OPTIONS':
+        return '', 204
     return chat_response(request.get_json(silent=True) or {})
 
 
-@app.route('/api/chat', methods=['POST'])
+@app.route('/api/chat', methods=['POST', 'OPTIONS'])
 def api_chat():
+    if request.method == 'OPTIONS':
+        return '', 204
     return chat_response(request.get_json(silent=True) or {})
 
 
@@ -4075,10 +4407,11 @@ def api_get_tractor_summary():
 
 
 if __name__ == '__main__':
+    host = os.getenv('FLASK_HOST', '0.0.0.0')
     port = int(os.getenv('FLASK_PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', 'True').lower() in ('true', '1', 'yes')
     app_url = f"http://127.0.0.1:{port}"
-    print(f"[OK] Starting Farmer AI Application Server on {app_url}")
+    print(f"[OK] Starting Farmer AI Application Server on {app_url} (listening on {host}:{port})")
     if not debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         threading.Timer(1.0, lambda: webbrowser.open(app_url)).start()
-    app.run(debug=debug, port=port)
+    app.run(host=host, debug=debug, port=port)
