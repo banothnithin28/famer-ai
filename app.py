@@ -13,7 +13,7 @@ import warnings
 from email.message import EmailMessage
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from urllib.parse import urlencode
+from urllib.parse import urlencode, unquote
 from urllib.request import Request, urlopen
 import webbrowser
 
@@ -40,6 +40,7 @@ from google import genai
 from google.genai import types
 
 from database.init_db import init_db
+from farm_context_service import build_farmer_context as build_farm_data_context
 
 # Load environment variables from .env file
 _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
@@ -311,64 +312,53 @@ def fetch_live_weather(latitude, longitude):
 
 # Configure Gemini (new google-genai SDK)
 _GEMINI_API_KEY = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-_PRIMARY_GEMINI_MODEL = (os.getenv('GEMINI_MODEL') or 'gemini-2.5-flash').strip()
+_PRIMARY_GEMINI_MODEL = (os.getenv('GEMINI_MODEL') or 'gemini-3.7-flash').strip()
 
 # Candidate models ordered by widespread availability across Google AI Studio & internal keys
 _CANDIDATE_GEMINI_MODELS = list(dict.fromkeys([
     _PRIMARY_GEMINI_MODEL,
+    'gemini-3.7-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-flash-latest',
+    'gemini-flash-lite-latest',
     'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
     'gemini-2.5-flash-lite',
     'gemini-2.0-flash-lite',
     'gemini-1.5-pro',
-    'gemini-3.5-flash-lite',
-    'gemini-3.8-flash',
-    'gemini-3.5-flash',
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
 ]))
 
 _VERIFIED_GEMINI_MODEL = None
 
-_FARMING_SYSTEM_PROMPT = """You are Farmer AI, an agricultural assistant designed to help farmers.
+_FARMING_SYSTEM_PROMPT = """You are Farmer AI, an agricultural assistant designed to help farmers manage their farms, understand their personal farm records, and make better agronomic decisions.
 
-Answer the farmer's actual question directly and clearly.
+ROLE & CAPABILITIES:
+1. Grounding in Personal Farm Records (Phase 5):
+   - When the farmer asks questions about their farm records (expenses, income, profit/balance, tractor work, labour, farm diary activities, plant health/scans, scanned receipts, or weather), consult the VERIFIED APPLICATION CONTEXT provided below.
+   - All financial and operational calculations (sums, balances, duration hours, quantities) in the context have been accurately pre-calculated by the backend server. Cite these numbers directly and confidently.
+   - Always frame answers based on recorded data: "Based on your Farm Diary records...", "You recorded ₹5,500 in fertilizer expenses...", "Based on your recorded income of ₹35,000 and recorded expenses of ₹18,000, your recorded cotton balance is ₹17,000."
+   - When asked about profit or balance, clearly state both recorded income and recorded expenses, and clarify that the balance reflects recorded transactions which may not represent complete financial reality if some receipts were unrecorded.
+   - When the farmer asks about an item or category with no recorded entries (e.g. "How much did I spend on pesticides?" when pesticide expenses are 0), do NOT invent numbers. Clearly say: "I don't see any pesticide expenses recorded in your Farm Diary. You can add expenses in Farm Diary."
+   - Never invent or fabricate personal records, receipts, plant scans, or financial amounts.
 
-You can help with:
-* crops
-* crop selection
-* crop diseases
-* plant health
-* pests
-* fertilizers
-* urea
-* irrigation
-* soil
-* weather
-* farming practices
-* government agricultural schemes
-* farming knowledge
-* agricultural technology
-* market information
-* farm management
+2. General Agronomic Expertise:
+   - When the farmer asks general agricultural questions (e.g. "What is NPK fertilizer?", "How to control cotton bollworm?", "What is PM-KISAN?"), provide practical, expert advice.
+   - You can seamlessly combine general agronomic best practices with the farmer's registered crops and location when relevant.
 
-Use simple language that farmers can understand.
-If the farmer asks a general question, answer the question directly.
-If the farmer asks about fertilizer, explain the fertilizer rather than talking about irrigation.
-If the farmer asks about a disease, discuss the disease rather than giving generic weather advice.
-If the farmer asks about weather, use the available weather information if provided.
-If the farmer asks about current prices, current government schemes, or other time-sensitive information, do not invent values. Explain that current information should be verified from a reliable/current source (e.g. local Mandi, e-NAM, or local Agriculture Department/KVK). If verified reference guidelines below apply, provide them as approximate reference figures.
-If the farmer provides crop, location, or symptoms, use those details in the answer.
-Do not repeatedly ask the farmer to provide crop, location, symptoms, and weather when those details are not necessary.
-Be conversational, respectful, and helpful.
-Never answer an unrelated question with a generic irrigation response.
+3. Conversational Follow-ups:
+   - Maintain context across follow-up questions (e.g. if the farmer asks "How much did I earn from cotton?" and follows up with "What did I spend on it?", understand "it" refers to cotton).
 
-LANGUAGE RULES:
-- If the farmer asks or writes in Telugu, reply in Telugu.
-- If the farmer asks or writes in Hindi, reply in Hindi.
-- If the farmer asks or writes in Tamil, reply in Tamil.
-- Otherwise, reply in English.
+4. Response Style:
+   - Keep answers short, clear, respectful, farmer-friendly, and formatted nicely for mobile viewing with bullet points and ₹ currency symbols.
+
+5. Multilingual Support:
+   - If the farmer asks or writes in Telugu, reply in Telugu.
+   - If the farmer asks or writes in Hindi, reply in Hindi.
+   - If the farmer asks or writes in Tamil, reply in Tamil.
+   - Otherwise, reply in English.
 
 REFERENCE INDIAN FERTILIZER PRICING (Official Government subsidized MRP guidelines):
 - Neem-Coated Urea (45 kg bag): ₹266.50 (statutorily fixed MRP across India by the Central Government). Per kg ≈ ₹5.92.
@@ -614,6 +604,21 @@ def send_assets(path):
         return send_from_directory(dist_assets, path)
     return ('Asset not found', 404)
 
+user_uploaded_media = {}
+user_uploaded_media_lock = threading.Lock()
+
+def record_user_upload(filename, user_id):
+    if not filename:
+        return
+    clean = os.path.basename(filename)
+    now = time.time()
+    with user_uploaded_media_lock:
+        # Keep recent uploads (cleanup older than 48 hours)
+        for k in list(user_uploaded_media.keys()):
+            if now - user_uploaded_media[k][1] > 172800:
+                user_uploaded_media.pop(k, None)
+        user_uploaded_media[clean] = (user_id, now)
+
 @app.route('/uploads/<path:filename>')
 def send_upload(filename):
     user = get_current_user()
@@ -621,6 +626,13 @@ def send_upload(filename):
         return jsonify({'success': False, 'error': 'Please sign in to view uploaded files.'}), 401
 
     clean_filename = os.path.basename(filename)
+
+    # Check if file belongs to user's recent upload session (e.g. scan preview before saving)
+    with user_uploaded_media_lock:
+        cached = user_uploaded_media.get(clean_filename)
+        if cached and cached[0] == user['id']:
+            return send_from_directory(app.config['UPLOAD_FOLDER'], clean_filename)
+
     conn = get_db()
     # Check if the file belongs to user's scans
     authorized = conn.execute(
@@ -2050,72 +2062,18 @@ def api_decision_score():
     })
 
 
-# 5. AI Chatbot API (powered by Google Gemini)
-def build_farmer_context(user, plant_id, latitude, longitude):
-    """
-    Gathers helpful farm and farmer context for Gemini without exposing sensitive credentials.
-    """
-    context = {}
-    if user:
-        conn = get_db()
-        context['farmer_name'] = user['name']
-        context['farmer_location'] = user['location']
-        profile = conn.execute(
-            "SELECT farm_size_acres, soil_type, primary_crop FROM farmer_profiles WHERE user_id = ?",
-            (user['id'],)
-        ).fetchone()
-        if profile:
-            if profile['farm_size_acres']:
-                context['farm_size_acres'] = profile['farm_size_acres']
-            if profile['soil_type']:
-                context['soil_type'] = profile['soil_type']
-            if profile['primary_crop']:
-                context['primary_crop'] = profile['primary_crop']
-
-        user_plants = conn.execute(
-            "SELECT crop_name, field_name, location FROM plants WHERE user_id = ? LIMIT 5",
-            (user['id'],)
-        ).fetchall()
-        if user_plants:
-            context['registered_crops'] = [dict(p) for p in user_plants]
-
-        if plant_id:
-            plant = conn.execute(
-                "SELECT id, crop_name, field_name, location, notes FROM plants WHERE id = ? AND user_id = ?",
-                (plant_id, user['id'])
-            ).fetchone()
-            if plant:
-                context['selected_plant'] = dict(plant)
-                scans = conn.execute(
-                    "SELECT disease_name, confidence, severity, symptoms, created_at FROM disease_scans WHERE plant_id = ? AND user_id = ? ORDER BY id DESC LIMIT 3",
-                    (plant_id, user['id'])
-                ).fetchall()
-                if scans:
-                    context['recent_scans'] = [dict(s) for s in scans]
-        else:
-            recent_scan = conn.execute(
-                "SELECT disease_name, confidence, severity, symptoms, created_at FROM disease_scans WHERE user_id = ? ORDER BY id DESC LIMIT 1",
-                (user['id'],)
-            ).fetchone()
-            if recent_scan:
-                context['latest_disease_scan'] = dict(recent_scan)
-        conn.close()
-
-    if latitude is not None and longitude is not None:
-        try:
-            weather = fetch_live_weather(float(latitude), float(longitude))
-            if weather and weather.get('current'):
-                curr = weather['current']
-                context['live_weather'] = {
-                    'temperature': f"{curr.get('temperature')}°C",
-                    'humidity': f"{curr.get('humidity')}%",
-                    'condition': curr.get('condition'),
-                    'rain': f"{curr.get('rain', 0)} mm"
-                }
-        except Exception:
-            pass
-
-    return context
+def build_farmer_context(user, plant_id=None, latitude=None, longitude=None, question=None, history=None):
+    """Compatibility wrapper for the secure farm-context builder used by the chatbot."""
+    return build_farm_data_context(
+        user,
+        plant_id=plant_id,
+        latitude=latitude,
+        longitude=longitude,
+        question=question,
+        history=history,
+        get_db_fn=get_db,
+        fetch_weather_fn=fetch_live_weather,
+    )
 
 
 def format_gemini_contents(history, current_message):
@@ -2348,6 +2306,62 @@ def get_agronomist_expert_reply(message, language='en', context=None):
             "* Always wear protective mask and gloves while spraying."
         )
 
+    # 5b. Labour, Worker & Wages Intelligence (Grounding from Real Database)
+    if any(w in msg_lower for w in ('labour', 'labor', 'worker', 'workers', 'wage', 'wages', 'owe', 'pending', 'attendance', 'కూలీ', 'రమేశ్', 'मजदूर', 'मजदूरी')):
+        fin = context.get('labour_financial_summary', {})
+        crop_labour = context.get('labour_by_crop', [])
+        workers = context.get('labour_workers', [])
+        jobs = context.get('labour_jobs', [])
+
+        # Check for specific crop query (e.g. cotton, paddy, tomato)
+        for cl in crop_labour:
+            c_name = str(cl.get('crop', '')).lower()
+            if c_name and c_name in msg_lower:
+                return (
+                    f"👨‍🌾 **Labour Work Record for {cl.get('crop')}:**\n\n"
+                    f"* **Total Labour Cost Recorded**: ₹{float(cl.get('total_labour_cost', 0)):,.2f}\n"
+                    f"* **Total Jobs / Contracts**: {cl.get('jobs_count', 0)}\n\n"
+                    "This data is retrieved directly from your recorded Labour Work Tracker database entries."
+                )
+
+        # Check for specific worker name query (e.g. Ramesh)
+        for w_item in workers:
+            w_name = str(w_item.get('worker_name', '')).lower()
+            if w_name and w_name in msg_lower:
+                return (
+                    f"👨‍🌾 **Worker Summary for {w_item.get('worker_name')}:**\n\n"
+                    f"* **Total Days Worked**: {w_item.get('total_days_worked', 0)} days\n"
+                    f"* **Total Jobs**: {w_item.get('total_jobs', 0)}\n"
+                    f"* **Total Wages Earned**: ₹{float(w_item.get('total_earned', 0)):,.2f}\n\n"
+                    "All records are verified from your daily attendance and labour logs."
+                )
+
+        # Check if asking about pending amounts / owing
+        if any(w in msg_lower for w in ('owe', 'pending', 'balance', 'remaining', 'due', 'బాకీ')):
+            pending_val = float(fin.get('total_pending_wages', 0))
+            return (
+                f"💰 **Pending Worker Wages Summary:**\n\n"
+                f"* **Total Amount Pending / Owed**: **₹{pending_val:,.2f}**\n"
+                f"* **Total Labour Cost**: ₹{float(fin.get('total_labour_cost', 0)):,.2f}\n"
+                f"* **Total Paid So Far**: ₹{float(fin.get('total_paid', 0)):,.2f}\n"
+                f"* **Advances Given**: ₹{float(fin.get('total_advances', 0)):,.2f}\n\n"
+                "You can record payments or advances anytime in the **Labour Work Tracker**."
+            )
+
+        # General labour overview
+        if fin or jobs or workers:
+            worker_names = [w.get('worker_name') for w in workers if w.get('worker_name')]
+            names_str = ", ".join(worker_names[:5]) if worker_names else "No workers recorded yet"
+            return (
+                f"👨‍🌾 **Your Labour Work & Worker Summary:**\n\n"
+                f"* **Total Labour Cost**: ₹{float(fin.get('total_labour_cost', 0)):,.2f}\n"
+                f"* **Paid to Date**: ₹{float(fin.get('total_paid', 0)):,.2f}\n"
+                f"* **Pending Amount**: ₹{float(fin.get('total_pending_wages', 0)):,.2f}\n"
+                f"* **Recent Workers**: {names_str}\n"
+                f"* **Active Jobs**: {len(jobs)}\n\n"
+                "You can view daily attendance, hourly timers, two-party confirmations, and settlement history in the **Labour Work** section."
+            )
+
     # 6. Specific Major Crops
     # Tomato
     if 'tomato' in msg_lower or 'టమాటా' in msg_lower or 'टमाटर' in msg_lower:
@@ -2431,17 +2445,7 @@ def get_agronomist_expert_reply(message, language='en', context=None):
             "   * Free scientific soil testing provided by the Agriculture Department / KVK every 2 years for optimal fertilizer planning."
         )
 
-    # 8. Soil Health, pH, Testing
-    if any(w in msg_lower for w in ('soil', 'ph', 'testing', 'nutrient', 'మట్టి', 'భూమి', 'मिट्टी', 'மண்')):
-        return (
-            "🌍 **Soil Health & Soil Nutrient Management:**\n\n"
-            "1. **Soil Testing**: Test your soil every 2 years through your local KVK or Agriculture Officer to get an exact Soil Health Card.\n"
-            "2. **pH Management**:\n"
-            "   * **Acidic soils (pH < 6.0)**: Apply agricultural lime (calcium carbonate) or dolomite to raise pH and make phosphorus available.\n"
-            "   * **Alkaline/Sodic soils (pH > 8.0)**: Apply Gypsum (calcium sulphate) to displace excess sodium and improve water penetration.\n"
-            "3. **Organic Carbon**: Increase soil organic carbon by incorporating 4–5 tonnes of Farm Yard Manure (FYM) or 2 tonnes of Vermicompost per acre.\n"
-            "4. **Green Manuring**: Grow green manure crops like Sunnhemp or Dhaincha and plough them in before flowering to naturally add 40–50 kg Nitrogen per acre."
-        )
+
 
     # 9. General / Default Agricultural Agronomist Advice
     farmer_ctx = ""
@@ -2487,7 +2491,14 @@ def chat_response(data):
     except (TypeError, ValueError):
         plant_id = None
 
-    context = build_farmer_context(user, plant_id, data.get('latitude'), data.get('longitude'))
+    context = build_farmer_context(
+        user,
+        plant_id=plant_id,
+        latitude=data.get('latitude'),
+        longitude=data.get('longitude'),
+        question=message,
+        history=data.get('history', []),
+    )
 
     system_instruction = _FARMING_SYSTEM_PROMPT
     if context:
@@ -2588,6 +2599,25 @@ def serialize_diary_entry(row):
 def serialize_expense(row):
     item = dict(row)
     item['amount'] = float(item.get('amount') or 0.0)
+    item['tax'] = float(item.get('tax') or 0.0)
+    item['discount'] = float(item.get('discount') or 0.0)
+    item['bill_number'] = item.get('bill_number') or None
+    item['vendor_name'] = item.get('vendor_name') or None
+    item['vendor_phone'] = item.get('vendor_phone') or None
+    item['vendor_address'] = item.get('vendor_address') or None
+    item['receipt_source'] = item.get('receipt_source') or 'MANUAL'
+    item['payment_method'] = item.get('payment_method') or None
+    item['scanned_at'] = item.get('scanned_at') or None
+
+    raw_json = item.get('raw_extracted_json')
+    if raw_json:
+        try:
+            item['extracted_details'] = json.loads(raw_json)
+        except Exception:
+            item['extracted_details'] = None
+    else:
+        item['extracted_details'] = None
+
     if item.get('receipt_path'):
         clean_name = os.path.basename(item['receipt_path'])
         item['receipt_url'] = f"/uploads/{clean_name}"
@@ -2797,6 +2827,544 @@ def api_delete_farm_diary(entry_id):
     return jsonify({'success': True, 'message': 'Diary entry deleted successfully.'})
 
 
+BILL_ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.pdf'}
+
+STANDARD_EXPENSE_CATEGORIES = [
+    'Fertilizer',
+    'Seeds',
+    'Pesticides',
+    'Equipment / Machinery',
+    'Fuel / Diesel',
+    'Irrigation',
+    'Labour / Wages',
+    'Maintenance & Repairs',
+    'Tractor Service',
+    'Other'
+]
+
+def normalize_expense_category(raw_category):
+    if not raw_category:
+        return 'Fertilizer'
+    cat_lower = str(raw_category).strip().lower()
+    for std in STANDARD_EXPENSE_CATEGORIES:
+        if std.lower() == cat_lower or std.lower() in cat_lower or cat_lower in std.lower():
+            return std
+    if any(k in cat_lower for k in ['fertiliz', 'urea', 'dap', 'npk', 'potash', 'manure', 'compost']):
+        return 'Fertilizer'
+    if any(k in cat_lower for k in ['seed', 'grain', 'sapling', 'hybrid']):
+        return 'Seeds'
+    if any(k in cat_lower for k in ['pestic', 'insectic', 'fungic', 'herbicide', 'spray', 'neem', 'weed']):
+        return 'Pesticides'
+    if any(k in cat_lower for k in ['tractor', 'plough', 'rotavator', 'harvester', 'tillage', 'cultivat']):
+        return 'Tractor Service'
+    if any(k in cat_lower for k in ['diesel', 'petrol', 'fuel', 'oil', 'lubricant']):
+        return 'Fuel / Diesel'
+    if any(k in cat_lower for k in ['labour', 'wage', 'worker', 'coolie', 'attendance', 'salary']):
+        return 'Labour / Wages'
+    if any(k in cat_lower for k in ['machin', 'tool', 'pump', 'motor', 'equip', 'sprayer', 'pipe']):
+        return 'Equipment / Machinery'
+    if any(k in cat_lower for k in ['irrigat', 'drip', 'sprinkler', 'bore', 'well', 'water']):
+        return 'Irrigation'
+    if any(k in cat_lower for k in ['repair', 'service', 'mainten', 'spare', 'welding']):
+        return 'Maintenance & Repairs'
+    return 'Other'
+
+def save_bill_media(file_obj, user_id=None):
+    if not file_obj or not file_obj.filename:
+        raise ValueError('No image file selected.')
+    orig_name = secure_filename(file_obj.filename)
+    ext = os.path.splitext(orig_name)[1].lower()
+    if not ext:
+        ext = '.jpg'
+    if ext not in BILL_ALLOWED_EXTENSIONS:
+        raise ValueError(f"Unsupported file type '{ext}'. Supported formats: JPG, JPEG, PNG, WebP.")
+
+    # Size check before reading
+    file_obj.seek(0, os.SEEK_END)
+    size = file_obj.tell()
+    file_obj.seek(0)
+    if size > 10 * 1024 * 1024:
+        raise ValueError('Image size exceeds 10MB limit. Please upload a smaller image.')
+    if size == 0:
+        raise ValueError('Uploaded image file is empty.')
+
+    # Validate image integrity with PIL if possible
+    try:
+        img = Image.open(file_obj)
+        img.verify()
+        file_obj.seek(0)
+    except Exception as img_err:
+        app.logger.debug("PIL verify check warning on upload: %s", img_err)
+        file_obj.seek(0)
+
+    filename = f"bill_{secrets.token_hex(12)}{ext}"
+    target_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file_obj.save(target_path)
+
+    if user_id:
+        record_user_upload(filename, user_id)
+
+    return filename
+
+def extract_bill_from_image(filepath):
+    """
+    Invokes Gemini Vision to extract structured JSON data from a farming receipt/bill.
+    Never hallucinates missing numbers, names or dates. Missing fields are set strictly to None.
+    """
+    global _VERIFIED_GEMINI_MODEL
+    active_client = get_gemini_client()
+    if not active_client:
+        raise RuntimeError('AI scanning service is currently initializing. Please try again in a few moments.')
+
+    try:
+        pil_img = Image.open(filepath).convert('RGB')
+    except Exception as img_err:
+        raise ValueError(f'Could not process image file: {img_err}')
+
+    system_prompt = """You are an expert OCR and agricultural document analysis AI for Farmer AI.
+Your task is to analyze agricultural store receipts, fertilizer bills, seed invoices, pesticide vouchers, machinery repairs, and diesel receipts with extreme accuracy.
+
+CRITICAL INSTRUCTIONS:
+1. Determine whether this image is a bill, receipt, cash memo, invoice, payment slip, or purchase voucher. If NOT a receipt/bill, set "is_receipt": false.
+2. Extract ONLY text and numbers visibly printed or clearly handwritten on the bill.
+3. NEVER invent, extrapolate, or guess values. If a field is missing, unclear, or unreadable, set it strictly to null.
+4. Extract item rows if visible (name, quantity, unit, unit_price, total).
+5. Extract subtotal, discount, tax/GST, and grand_total.
+6. Identify vendor/shop name, phone number, address, bill/receipt number, and bill date (format YYYY-MM-DD if recognizable, or null).
+7. Categorize into one of: ["Fertilizer", "Seeds", "Pesticides", "Equipment / Machinery", "Fuel / Diesel", "Irrigation", "Labour / Wages", "Maintenance & Repairs", "Tractor Service", "Other"].
+8. Identify payment method (e.g. "Cash", "UPI", "Bank Transfer", "Credit") if visible.
+9. Return ONLY a valid JSON object without markdown fences or extra commentary.
+
+REQUIRED JSON STRUCTURE:
+{
+  "is_receipt": true,
+  "confidence": "high",
+  "bill_number": "INV-1025",
+  "bill_date": "2026-09-28",
+  "vendor_name": "ABC Fertilizers",
+  "vendor_phone": "9876543210",
+  "vendor_address": "Main Road, Warangal",
+  "category": "Fertilizer",
+  "product_type": "Fertilizer",
+  "items": [
+    {
+      "name": "Urea (45kg)",
+      "quantity": 2,
+      "unit": "bags",
+      "unit_price": 266.5,
+      "total": 533.0
+    }
+  ],
+  "subtotal": 533.0,
+  "discount": 0.0,
+  "tax": 0.0,
+  "grand_total": 533.0,
+  "payment_method": "Cash",
+  "notes": "Fertilizer purchase receipt",
+  "confidence_by_field": {
+    "bill_number": "high",
+    "bill_date": "high",
+    "vendor_name": "high",
+    "vendor_phone": "high",
+    "vendor_address": "medium",
+    "category": "high",
+    "grand_total": "high"
+  }
+}
+"""
+
+    models_to_try = [_VERIFIED_GEMINI_MODEL] if _VERIFIED_GEMINI_MODEL else []
+    for m in _CANDIDATE_GEMINI_MODELS:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
+    last_error = None
+    extracted_text = None
+
+    for model_name in models_to_try:
+        try:
+            gen_config = types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.1,
+                max_output_tokens=1200,
+            )
+            response = active_client.models.generate_content(
+                model=model_name,
+                contents=[pil_img, "Extract all structured information from this bill/receipt strictly as JSON."],
+                config=gen_config
+            )
+            text = (response.text or '').strip()
+            if text:
+                _VERIFIED_GEMINI_MODEL = model_name
+                extracted_text = text
+                break
+        except Exception as e:
+            last_error = str(e)
+            app.logger.warning("Gemini model %s failed on bill scan: %s", model_name, str(e))
+
+    if not extracted_text:
+        raise RuntimeError(f"Farmer AI could not read this bill clearly. Please take a clearer photo and try again. ({last_error or 'Service unavailable'})")
+
+    # Clean JSON text
+    clean_json_str = extracted_text.strip()
+    if clean_json_str.startswith('```'):
+        clean_json_str = re.sub(r'^```(?:json)?\s*', '', clean_json_str, flags=re.IGNORECASE)
+        clean_json_str = re.sub(r'\s*```$', '', clean_json_str)
+
+    try:
+        data = json.loads(clean_json_str)
+    except Exception:
+        # Try finding the first outermost JSON object
+        match = re.search(r'\{.*\}', clean_json_str, re.DOTALL)
+        if match:
+            try:
+                data = json.loads(match.group(0))
+            except Exception as pe:
+                raise ValueError("Could not parse extracted receipt details. Please upload a clearer photo.")
+        else:
+            raise ValueError("Farmer AI could not read this bill clearly. Please take a clearer photo and try again.")
+
+    if not isinstance(data, dict):
+        raise ValueError("Invalid format received from receipt analysis. Please try again.")
+
+    return sanitize_extracted_bill(data)
+
+def sanitize_extracted_bill(data):
+    is_receipt = bool(data.get('is_receipt', True))
+    raw_confidence = str(data.get('confidence', 'medium')).lower()
+    if raw_confidence not in ('high', 'medium', 'low', 'none'):
+        try:
+            val = float(raw_confidence)
+            raw_confidence = 'high' if val >= 0.85 else 'medium' if val >= 0.5 else 'low'
+        except Exception:
+            raw_confidence = 'medium'
+
+    bill_number = str(data.get('bill_number') or '').strip() or None
+    bill_date = str(data.get('bill_date') or '').strip() or None
+    if bill_date:
+        # Try normalizing date format to YYYY-MM-DD
+        date_match = re.search(r'(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})', bill_date)
+        if date_match:
+            bill_date = f"{date_match.group(1)}-{int(date_match.group(2)):02d}-{int(date_match.group(3)):02d}"
+        else:
+            date_match2 = re.search(r'(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})', bill_date)
+            if date_match2:
+                bill_date = f"{date_match2.group(3)}-{int(date_match2.group(2)):02d}-{int(date_match2.group(1)):02d}"
+
+    vendor_name = str(data.get('vendor_name') or '').strip() or None
+    vendor_phone = str(data.get('vendor_phone') or '').strip() or None
+    vendor_address = str(data.get('vendor_address') or '').strip() or None
+    category = normalize_expense_category(data.get('category'))
+    product_type = str(data.get('product_type') or '').strip() or category
+    payment_method = str(data.get('payment_method') or '').strip() or None
+    notes = str(data.get('notes') or '').strip() or None
+
+    # Parse items list
+    raw_items = data.get('items') or []
+    items = []
+    if isinstance(raw_items, list):
+        for it in raw_items:
+            if not isinstance(it, dict):
+                continue
+            name = str(it.get('name') or '').strip()
+            if not name:
+                continue
+            qty = None
+            if it.get('quantity') is not None:
+                try:
+                    qty = float(it.get('quantity'))
+                except (ValueError, TypeError):
+                    qty = None
+
+            unit = str(it.get('unit') or '').strip() or None
+
+            unit_price = None
+            if it.get('unit_price') is not None:
+                try:
+                    unit_price = float(it.get('unit_price'))
+                except (ValueError, TypeError):
+                    unit_price = None
+
+            total = None
+            if it.get('total') is not None:
+                try:
+                    total = float(it.get('total'))
+                except (ValueError, TypeError):
+                    total = None
+
+            if total is None and qty is not None and unit_price is not None:
+                total = round(qty * unit_price, 2)
+
+            items.append({
+                'name': name,
+                'quantity': qty,
+                'unit': unit,
+                'unit_price': unit_price,
+                'total': total
+            })
+
+    def safe_num(val):
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
+
+    subtotal = safe_num(data.get('subtotal'))
+    discount = safe_num(data.get('discount')) or 0.0
+    tax = safe_num(data.get('tax')) or 0.0
+    grand_total = safe_num(data.get('grand_total'))
+
+    if grand_total is None and subtotal is not None:
+        grand_total = round(subtotal + tax - discount, 2)
+    elif grand_total is None and items:
+        sum_items = sum(it['total'] for it in items if it.get('total') is not None)
+        if sum_items > 0:
+            grand_total = round(sum_items + tax - discount, 2)
+
+    confidence_by_field = data.get('confidence_by_field') or {}
+    if not isinstance(confidence_by_field, dict):
+        confidence_by_field = {}
+
+    def norm_conf(c):
+        if not c:
+            return 'medium'
+        c_str = str(c).lower()
+        if c_str in ('high', 'medium', 'low', 'none'):
+            return c_str
+        try:
+            v = float(c_str)
+            return 'high' if v >= 0.85 else 'medium' if v >= 0.5 else 'low'
+        except Exception:
+            return 'medium'
+
+    indicators = {
+        'vendor_name': norm_conf(confidence_by_field.get('vendor_name') or ('high' if vendor_name else 'none')),
+        'bill_date': norm_conf(confidence_by_field.get('bill_date') or ('high' if bill_date else 'none')),
+        'bill_number': norm_conf(confidence_by_field.get('bill_number') or ('high' if bill_number else 'none')),
+        'category': norm_conf(confidence_by_field.get('category') or 'high'),
+        'grand_total': norm_conf(confidence_by_field.get('grand_total') or ('high' if grand_total is not None else 'none')),
+        'items': norm_conf(confidence_by_field.get('items') or ('high' if len(items) > 0 else 'none'))
+    }
+
+    return {
+        'is_receipt': is_receipt,
+        'confidence': raw_confidence,
+        'bill_number': bill_number,
+        'bill_date': bill_date,
+        'vendor_name': vendor_name,
+        'vendor_phone': vendor_phone,
+        'vendor_address': vendor_address,
+        'category': category,
+        'product_type': product_type,
+        'items': items,
+        'subtotal': subtotal,
+        'discount': discount,
+        'tax': tax,
+        'grand_total': grand_total,
+        'total_amount': grand_total,
+        'payment_method': payment_method,
+        'notes': notes,
+        'confidence_by_field': indicators
+    }
+
+def verify_bill_totals(extracted):
+    """
+    Validates item totals (qty * price) and grand total math (subtotal + tax - discount).
+    """
+    warnings = []
+    matches = True
+
+    # 1. Item math check
+    for it in extracted.get('items', []):
+        qty = it.get('quantity')
+        price = it.get('unit_price')
+        tot = it.get('total')
+        if qty is not None and price is not None and tot is not None:
+            expected = round(qty * price, 2)
+            if abs(expected - tot) > 1.0:
+                warnings.append(f"Item '{it.get('name')}': {qty} × ₹{price} = ₹{expected}, but listed as ₹{tot}")
+                matches = False
+
+    # 2. Grand total math check
+    sub = extracted.get('subtotal')
+    tax = extracted.get('tax') or 0.0
+    disc = extracted.get('discount') or 0.0
+    gt = extracted.get('grand_total')
+
+    calc_gt = None
+    if sub is not None:
+        calc_gt = round(sub + tax - disc, 2)
+        if gt is not None and abs(calc_gt - gt) > 1.5:
+            warnings.append(f"Subtotal (₹{sub}) + Tax (₹{tax}) - Discount (₹{disc}) = ₹{calc_gt}, but detected total is ₹{gt}")
+            matches = False
+    elif extracted.get('items'):
+        items_tot = sum(it.get('total', 0) for it in extracted['items'] if it.get('total') is not None)
+        calc_gt = round(items_tot + tax - disc, 2)
+        if gt is not None and abs(calc_gt - gt) > 1.5:
+            warnings.append(f"Sum of items (₹{items_tot}) + Tax (₹{tax}) - Discount (₹{disc}) = ₹{calc_gt}, but detected total is ₹{gt}")
+            matches = False
+
+    warning_msg = None
+    if warnings:
+        warning_msg = "The bill totals do not appear to match. Please verify the amount."
+
+    return {
+        'matches': matches,
+        'warning': warning_msg,
+        'details': warnings,
+        'calculated_total': calc_gt
+    }
+
+def check_duplicate_bill(user_id, extracted):
+    """
+    Checks if a bill with the same bill_number or same (vendor, date, amount) already exists for this farmer.
+    """
+    bill_no = extracted.get('bill_number')
+    vendor = extracted.get('vendor_name')
+    date_val = extracted.get('bill_date')
+    amount_val = extracted.get('grand_total')
+
+    conn = get_db()
+    duplicate_row = None
+
+    if bill_no:
+        duplicate_row = conn.execute(
+            "SELECT * FROM farm_expenses WHERE user_id = ? AND bill_number = ? LIMIT 1",
+            (user_id, bill_no)
+        ).fetchone()
+
+    if not duplicate_row and vendor and date_val and amount_val:
+        duplicate_row = conn.execute("""
+            SELECT * FROM farm_expenses
+            WHERE user_id = ? AND LOWER(vendor_name) = LOWER(?) AND date = ? AND ABS(amount - ?) < 1.0
+            LIMIT 1
+        """, (user_id, vendor, date_val, amount_val)).fetchone()
+
+    conn.close()
+
+    if duplicate_row:
+        exp = serialize_expense(duplicate_row)
+        return {
+            'is_duplicate': True,
+            'message': f"This bill may already have been added on {exp.get('date')} (₹{exp.get('amount')}, {exp.get('vendor_name') or exp.get('category')}).",
+            'existing_expense': exp
+        }
+
+    return {
+        'is_duplicate': False,
+        'message': None,
+        'existing_expense': None
+    }
+
+
+# ==============================================================================
+# BILL SCANNING & EXPENSE REST ENDPOINTS
+# ==============================================================================
+
+@app.route('/api/scan-bill', methods=['POST', 'OPTIONS'])
+@app.route('/api/expenses/scan-bill', methods=['POST', 'OPTIONS'])
+def api_scan_bill():
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to scan bills.'}), 401
+
+    if 'bill_image' not in request.files and 'receipt' not in request.files and 'image' not in request.files:
+        return jsonify({'success': False, 'error': 'Please upload a bill image file.'}), 400
+
+    file_obj = request.files.get('bill_image') or request.files.get('receipt') or request.files.get('image')
+    if not file_obj or not file_obj.filename:
+        return jsonify({'success': False, 'error': 'Please select an image file.'}), 400
+
+    try:
+        saved_filename = save_bill_media(file_obj, user_id=user['id'])
+    except ValueError as ve:
+        return jsonify({'success': False, 'error': str(ve)}), 400
+    except Exception as e:
+        app.logger.error("Error saving bill file: %s", str(e))
+        return jsonify({'success': False, 'error': 'Failed to save uploaded bill image. Please try again.'}), 500
+
+    target_filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
+
+    try:
+        extracted = extract_bill_from_image(target_filepath)
+    except ValueError as ve:
+        return jsonify({'success': False, 'error': str(ve)}), 400
+    except Exception as e:
+        app.logger.error("AI Bill extraction failed: %s", str(e))
+        return jsonify({
+            'success': False,
+            'error': 'Farmer AI could not read this bill clearly. Please take a clearer photo and try again.'
+        }), 500
+
+    if not extracted.get('is_receipt'):
+        return jsonify({
+            'success': False,
+            'is_receipt': False,
+            'error': 'The uploaded image does not appear to be a farming bill or receipt. Please take a photo of the complete receipt.',
+            'receipt_path': saved_filename,
+            'receipt_url': f"/uploads/{saved_filename}"
+        }), 422
+
+    # Verification checks
+    totals_check = verify_bill_totals(extracted)
+    duplicate_check = check_duplicate_bill(user['id'], extracted)
+
+    # Pre-generate suggested description
+    vendor = extracted.get('vendor_name')
+    cat = extracted.get('category') or 'Farming material'
+    desc = f"{cat} purchased from {vendor}" if vendor else f"{cat} purchase"
+    if extracted.get('items'):
+        item_names = [it['name'] for it in extracted['items'][:3]]
+        desc = f"{', '.join(item_names)} from {vendor}" if vendor else f"{', '.join(item_names)}"
+
+    extracted['suggested_description'] = desc
+
+    return jsonify({
+        'success': True,
+        'message': 'Bill scanned and extracted successfully.',
+        'receipt_path': saved_filename,
+        'receipt_url': f"/uploads/{saved_filename}",
+        'extracted_data': extracted,
+        'totals_verification': totals_check,
+        'duplicate_check': duplicate_check,
+        'confidence_indicators': extracted.get('confidence_by_field', {})
+    })
+
+
+@app.route('/api/scanned-bills', methods=['GET'])
+def api_get_scanned_bills():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view scanned bills.'}), 401
+
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT * FROM farm_expenses
+        WHERE user_id = ? AND (
+            UPPER(receipt_source) IN ('AI_SCAN', 'SCANNED', 'SCANNED_RECEIPT')
+            OR bill_number IS NOT NULL
+            OR raw_extracted_json IS NOT NULL
+        )
+        ORDER BY date DESC, id DESC
+    """, (user['id'],)).fetchall()
+    conn.close()
+
+    scanned_expenses = [serialize_expense(r) for r in rows]
+    total_scanned_amount = sum(e['amount'] for e in scanned_expenses)
+
+    return jsonify({
+        'success': True,
+        'scanned_bills': scanned_expenses,
+        'count': len(scanned_expenses),
+        'total_amount': round(total_scanned_amount, 2)
+    })
+
+
 # 2. Expense Management Endpoints
 @app.route('/api/expenses', methods=['GET'])
 def api_get_expenses():
@@ -2807,6 +3375,7 @@ def api_get_expenses():
     cat_filter = request.args.get('category', '').strip()
     crop_filter = request.args.get('crop', '').strip()
     month_filter = request.args.get('month', '').strip()
+    source_filter = request.args.get('source', '').strip() or request.args.get('receipt_source', '').strip()
     start_date = request.args.get('start_date', '').strip()
     end_date = request.args.get('end_date', '').strip()
     search = request.args.get('search', '').strip()
@@ -2820,6 +3389,9 @@ def api_get_expenses():
     if crop_filter:
         query += " AND LOWER(crop) = LOWER(?)"
         params.append(crop_filter)
+    if source_filter:
+        query += " AND UPPER(receipt_source) = UPPER(?)"
+        params.append(source_filter)
     if month_filter:
         query += " AND date LIKE ?"
         params.append(f"{month_filter}%")
@@ -2830,9 +3402,9 @@ def api_get_expenses():
         query += " AND date <= ?"
         params.append(end_date)
     if search:
-        query += " AND (LOWER(category) LIKE ? OR LOWER(crop) LIKE ? OR LOWER(field_name) LIKE ? OR LOWER(description) LIKE ?)"
+        query += " AND (LOWER(category) LIKE ? OR LOWER(crop) LIKE ? OR LOWER(field_name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(vendor_name) LIKE ? OR LOWER(bill_number) LIKE ?)"
         term = f"%{search.lower()}%"
-        params.extend([term, term, term, term])
+        params.extend([term, term, term, term, term, term])
 
     query += " ORDER BY date DESC, id DESC"
 
@@ -2864,7 +3436,22 @@ def api_create_expense():
         crop_val = str(data.get('crop', '')).strip()
         field_val = str(data.get('field_name', '')).strip()
         desc_val = str(data.get('description', '')).strip()
-        receipt_path = str(data.get('receipt_path', '')).strip() or None
+        raw_r_path = str(data.get('receipt_path', '')).strip()
+        raw_r_url = str(data.get('receipt_url', '')).strip()
+        receipt_path = raw_r_path or (os.path.basename(raw_r_url) if raw_r_url else None) or None
+        bill_number = str(data.get('bill_number', '')).strip() or None
+        vendor_name = str(data.get('vendor_name', '')).strip() or None
+        vendor_phone = str(data.get('vendor_phone', '')).strip() or None
+        vendor_address = str(data.get('vendor_address', '')).strip() or None
+        receipt_source = str(data.get('receipt_source', 'MANUAL')).strip() or 'MANUAL'
+        tax_raw = data.get('tax', 0.0)
+        discount_raw = data.get('discount', 0.0)
+        payment_method = str(data.get('payment_method', '')).strip() or None
+        raw_extracted_json = data.get('raw_extracted_json')
+        if isinstance(raw_extracted_json, (dict, list)):
+            raw_extracted_json = json.dumps(raw_extracted_json)
+        elif not isinstance(raw_extracted_json, str):
+            raw_extracted_json = None
     else:
         date_val = str(request.form.get('date', '')).strip()
         cat_val = str(request.form.get('category', '')).strip()
@@ -2872,11 +3459,22 @@ def api_create_expense():
         crop_val = str(request.form.get('crop', '')).strip()
         field_val = str(request.form.get('field_name', '')).strip()
         desc_val = str(request.form.get('description', '')).strip()
-        receipt_path = str(request.form.get('receipt_path', '')).strip() or None
+        raw_r_path = str(request.form.get('receipt_path', '')).strip()
+        raw_r_url = str(request.form.get('receipt_url', '')).strip()
+        receipt_path = raw_r_path or (os.path.basename(raw_r_url) if raw_r_url else None) or None
+        bill_number = str(request.form.get('bill_number', '')).strip() or None
+        vendor_name = str(request.form.get('vendor_name', '')).strip() or None
+        vendor_phone = str(request.form.get('vendor_phone', '')).strip() or None
+        vendor_address = str(request.form.get('vendor_address', '')).strip() or None
+        receipt_source = str(request.form.get('receipt_source', 'MANUAL')).strip() or 'MANUAL'
+        tax_raw = request.form.get('tax', 0.0)
+        discount_raw = request.form.get('discount', 0.0)
+        payment_method = str(request.form.get('payment_method', '')).strip() or None
+        raw_extracted_json = request.form.get('raw_extracted_json')
 
         if 'receipt' in request.files and request.files['receipt'].filename:
             try:
-                receipt_path = save_farm_media(request.files['receipt'])
+                receipt_path = save_bill_media(request.files['receipt'], user_id=user['id'])
             except ValueError as ve:
                 return jsonify({'success': False, 'error': str(ve)}), 400
 
@@ -2893,12 +3491,32 @@ def api_create_expense():
     if amount_val < 0:
         return jsonify({'success': False, 'error': 'Expense amount cannot be negative.'}), 400
 
+    try:
+        tax_val = float(tax_raw) if tax_raw is not None else 0.0
+    except (ValueError, TypeError):
+        tax_val = 0.0
+
+    try:
+        discount_val = float(discount_raw) if discount_raw is not None else 0.0
+    except (ValueError, TypeError):
+        discount_val = 0.0
+
+    scanned_at_val = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') if receipt_source == 'SCANNED_RECEIPT' else None
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO farm_expenses (user_id, date, category, amount, crop, field_name, description, receipt_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (user['id'], date_val, cat_val, amount_val, crop_val, field_val, desc_val, receipt_path))
+        INSERT INTO farm_expenses (
+            user_id, date, category, amount, crop, field_name, description,
+            receipt_path, bill_number, vendor_name, vendor_phone, vendor_address,
+            receipt_source, raw_extracted_json, tax, discount, payment_method, scanned_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        user['id'], date_val, cat_val, amount_val, crop_val, field_val, desc_val,
+        receipt_path, bill_number, vendor_name, vendor_phone, vendor_address,
+        receipt_source, raw_extracted_json, tax_val, discount_val, payment_method, scanned_at_val
+    ))
     exp_id = cursor.lastrowid
     conn.commit()
 
@@ -2937,6 +3555,17 @@ def api_update_expense(expense_id):
         field_val = str(data.get('field_name', existing['field_name'] or '')).strip()
         desc_val = str(data.get('description', existing['description'] or '')).strip()
         receipt_path = data.get('receipt_path', existing['receipt_path'])
+        bill_number = data.get('bill_number', existing['bill_number'])
+        vendor_name = data.get('vendor_name', existing['vendor_name'])
+        vendor_phone = data.get('vendor_phone', existing['vendor_phone'])
+        vendor_address = data.get('vendor_address', existing['vendor_address'])
+        receipt_source = data.get('receipt_source', existing['receipt_source'] or 'MANUAL')
+        tax_raw = data.get('tax', existing['tax'] if 'tax' in existing.keys() else 0.0)
+        discount_raw = data.get('discount', existing['discount'] if 'discount' in existing.keys() else 0.0)
+        payment_method = data.get('payment_method', existing['payment_method'])
+        raw_extracted_json = data.get('raw_extracted_json', existing['raw_extracted_json'] if 'raw_extracted_json' in existing.keys() else None)
+        if isinstance(raw_extracted_json, (dict, list)):
+            raw_extracted_json = json.dumps(raw_extracted_json)
     else:
         date_val = str(request.form.get('date', existing['date'])).strip()
         cat_val = str(request.form.get('category', existing['category'])).strip()
@@ -2945,10 +3574,19 @@ def api_update_expense(expense_id):
         field_val = str(request.form.get('field_name', existing['field_name'] or '')).strip()
         desc_val = str(request.form.get('description', existing['description'] or '')).strip()
         receipt_path = request.form.get('receipt_path', existing['receipt_path'])
+        bill_number = request.form.get('bill_number', existing['bill_number'])
+        vendor_name = request.form.get('vendor_name', existing['vendor_name'])
+        vendor_phone = request.form.get('vendor_phone', existing['vendor_phone'])
+        vendor_address = request.form.get('vendor_address', existing['vendor_address'])
+        receipt_source = request.form.get('receipt_source', existing['receipt_source'] or 'MANUAL')
+        tax_raw = request.form.get('tax', existing['tax'] if 'tax' in existing.keys() else 0.0)
+        discount_raw = request.form.get('discount', existing['discount'] if 'discount' in existing.keys() else 0.0)
+        payment_method = request.form.get('payment_method', existing['payment_method'])
+        raw_extracted_json = request.form.get('raw_extracted_json', existing['raw_extracted_json'] if 'raw_extracted_json' in existing.keys() else None)
 
         if 'receipt' in request.files and request.files['receipt'].filename:
             try:
-                receipt_path = save_farm_media(request.files['receipt'])
+                receipt_path = save_bill_media(request.files['receipt'], user_id=user['id'])
             except ValueError as ve:
                 conn.close()
                 return jsonify({'success': False, 'error': str(ve)}), 400
@@ -2970,11 +3608,29 @@ def api_update_expense(expense_id):
         conn.close()
         return jsonify({'success': False, 'error': 'Expense amount cannot be negative.'}), 400
 
+    try:
+        tax_val = float(tax_raw) if tax_raw is not None else 0.0
+    except (ValueError, TypeError):
+        tax_val = 0.0
+
+    try:
+        discount_val = float(discount_raw) if discount_raw is not None else 0.0
+    except (ValueError, TypeError):
+        discount_val = 0.0
+
     conn.execute("""
         UPDATE farm_expenses
-        SET date = ?, category = ?, amount = ?, crop = ?, field_name = ?, description = ?, receipt_path = ?, updated_at = CURRENT_TIMESTAMP
+        SET date = ?, category = ?, amount = ?, crop = ?, field_name = ?, description = ?,
+            receipt_path = ?, bill_number = ?, vendor_name = ?, vendor_phone = ?, vendor_address = ?,
+            receipt_source = ?, raw_extracted_json = ?, tax = ?, discount = ?, payment_method = ?,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND user_id = ?
-    """, (date_val, cat_val, amount_val, crop_val, field_val, desc_val, receipt_path, expense_id, user['id']))
+    """, (
+        date_val, cat_val, amount_val, crop_val, field_val, desc_val,
+        receipt_path, bill_number, vendor_name, vendor_phone, vendor_address,
+        receipt_source, raw_extracted_json, tax_val, discount_val, payment_method,
+        expense_id, user['id']
+    ))
     conn.commit()
 
     updated = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (expense_id,)).fetchone()
@@ -4406,6 +5062,1481 @@ def api_get_tractor_summary():
     })
 
 
+# ==============================================================================
+# PHASE 3: LABOUR WORK TRACKER BACKEND API & CONTROLLERS
+# ==============================================================================
+
+VALID_LABOUR_PAYMENT_TYPES = {'per_day', 'per_hour', 'fixed'}
+
+def generate_labour_job_id(conn, work_date):
+    try:
+        dt = datetime.datetime.strptime(work_date.strip(), '%Y-%m-%d')
+        date_str = dt.strftime('%Y%m%d')
+    except Exception:
+        date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+
+    prefix = f"LAB-{date_str}-"
+    rows = conn.execute(
+        "SELECT job_id FROM labour_jobs WHERE job_id LIKE ? ORDER BY job_id DESC",
+        (f"{prefix}%",)
+    ).fetchall()
+
+    max_seq = 0
+    for r in rows:
+        jid = str(r['job_id'])
+        parts = jid.split('-')
+        if len(parts) >= 3 and parts[-1].isdigit():
+            max_seq = max(max_seq, int(parts[-1]))
+
+    next_seq = max_seq + 1
+    return f"{prefix}{next_seq:03d}"
+
+
+def recalculate_labour_job_finances(conn, job_id_pk):
+    """
+    Computes accurate financial calculations for a labour job:
+      - Total active hours/seconds (if hourly)
+      - Total days worked from attendance logs
+      - Total earned based on payment_type (per_day, per_hour, fixed)
+      - Total advances given
+      - Total payments made
+      - Remaining pending amount
+    Updates both the parent job and child worker records atomically.
+    """
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id_pk,)).fetchone()
+    if not job:
+        return
+
+    payment_type = job['payment_type']
+    rate = float(job['rate'] or 0.0)
+    num_workers = max(1, int(job['num_workers'] or 1))
+
+    # 1. Attendance aggregation
+    att_row = conn.execute(
+        """SELECT COALESCE(SUM(day_fraction), 0) as total_days,
+                  COALESCE(SUM(hours_worked), 0) as total_att_hours,
+                  COALESCE(SUM(wage_amount), 0) as total_att_wage
+           FROM labour_attendance WHERE labour_job_id = ?""",
+        (job_id_pk,)
+    ).fetchone()
+
+    total_days_worked = round(float(att_row['total_days'] or 0.0), 2)
+    att_wage_sum = round(float(att_row['total_att_wage'] or 0.0), 2)
+
+    # 2. Hourly work timeline calculation
+    events = [dict(r) for r in conn.execute(
+        "SELECT * FROM labour_work_events WHERE labour_job_id = ? ORDER BY id ASC",
+        (job_id_pk,)
+    ).fetchall()]
+
+    total_active_seconds = compute_job_timeline_and_seconds(
+        events,
+        current_status=job['status'],
+        total_working_seconds=job['total_working_seconds']
+    )
+
+    # 3. Compute Total Earned
+    if payment_type == 'per_day':
+        # If attendance records exist, use the exact sum of daily wages
+        if total_days_worked > 0 or att_wage_sum > 0:
+            total_earned = att_wage_sum
+        else:
+            total_earned = 0.0
+    elif payment_type == 'per_hour':
+        hourly_hours = total_active_seconds / 3600.0
+        total_earned = round(hourly_hours * rate * num_workers, 2)
+    elif payment_type == 'fixed':
+        total_earned = round(rate, 2)
+    else:
+        total_earned = round(rate, 2)
+
+    # 4. Total Advances
+    adv_row = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) as s FROM labour_advances WHERE labour_job_id = ?",
+        (job_id_pk,)
+    ).fetchone()
+    total_advance = round(float(adv_row['s'] or 0.0), 2)
+
+    # 5. Total Payments
+    pay_row = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) as s FROM labour_payments WHERE labour_job_id = ?",
+        (job_id_pk,)
+    ).fetchone()
+    total_paid = round(float(pay_row['s'] or 0.0), 2)
+
+    # 6. Pending Amount = Total Earned - (Total Paid + Total Advance)
+    pending_amount = max(0.0, round(total_earned - (total_paid + total_advance), 2))
+
+    conn.execute("""
+        UPDATE labour_jobs
+        SET total_working_seconds = ?,
+            total_days_worked = ?,
+            total_earned = ?,
+            total_advance = ?,
+            total_paid = ?,
+            pending_amount = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (total_active_seconds, total_days_worked, total_earned, total_advance, total_paid, pending_amount, job_id_pk))
+
+    # Update individual labour_workers breakdown
+    workers = conn.execute("SELECT id, name FROM labour_workers WHERE labour_job_id = ?", (job_id_pk,)).fetchall()
+    for w in workers:
+        wid = w['id']
+        wname = w['name']
+
+        w_att = conn.execute(
+            """SELECT COALESCE(SUM(day_fraction), 0) as days,
+                      COALESCE(SUM(hours_worked), 0) as hrs,
+                      COALESCE(SUM(wage_amount), 0) as wage
+               FROM labour_attendance
+               WHERE labour_job_id = ? AND (worker_id = ? OR worker_name = ?)""",
+            (job_id_pk, wid, wname)
+        ).fetchone()
+
+        w_days = round(float(w_att['days'] or 0.0), 2)
+        w_hrs = round(float(w_att['hrs'] or 0.0), 2)
+
+        if payment_type == 'per_day':
+            w_earned = round(float(w_att['wage'] or 0.0), 2)
+        elif payment_type == 'per_hour':
+            w_earned = round((total_active_seconds / 3600.0) * rate, 2)
+        else:
+            w_earned = round(rate / max(1, len(workers)), 2)
+
+        w_adv = float(conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) as s FROM labour_advances WHERE labour_job_id = ? AND (worker_id = ? OR worker_name = ?)",
+            (job_id_pk, wid, wname)
+        ).fetchone()['s'] or 0.0)
+
+        w_pay = float(conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) as s FROM labour_payments WHERE labour_job_id = ? AND (worker_id = ? OR worker_name = ?)",
+            (job_id_pk, wid, wname)
+        ).fetchone()['s'] or 0.0)
+
+        w_pending = max(0.0, round(w_earned - (w_pay + w_adv), 2))
+
+        conn.execute("""
+            UPDATE labour_workers
+            SET total_days = ?,
+                total_hours = ?,
+                total_earned = ?,
+                total_advance = ?,
+                total_paid = ?,
+                pending_amount = ?
+            WHERE id = ?
+        """, (w_days, w_hrs, w_earned, w_adv, w_pay, w_pending, wid))
+
+
+def serialize_labour_job(row, user_id=None, conn=None):
+    item = dict(row)
+    item['rate'] = float(item.get('rate') or 0.0)
+    item['num_workers'] = int(item.get('num_workers') or 1)
+    item['farmer_agreed'] = bool(item.get('farmer_agreed'))
+    item['worker_agreed'] = bool(item.get('worker_agreed'))
+    item['farmer_confirmed'] = bool(item.get('farmer_confirmed'))
+    item['worker_confirmed'] = bool(item.get('worker_confirmed'))
+    item['total_working_seconds'] = int(item.get('total_working_seconds') or 0)
+    item['total_days_worked'] = float(item.get('total_days_worked') or 0.0)
+    item['total_earned'] = float(item.get('total_earned') or 0.0)
+    item['total_paid'] = float(item.get('total_paid') or 0.0)
+    item['total_advance'] = float(item.get('total_advance') or 0.0)
+    item['pending_amount'] = float(item.get('pending_amount') or 0.0)
+
+    if user_id:
+        item['is_farmer'] = (item.get('farmer_id') == user_id)
+        item['is_worker'] = (item.get('worker_id') == user_id)
+        if item['is_farmer']:
+            item['current_user_role'] = 'farmer'
+        elif item['is_worker']:
+            item['current_user_role'] = 'worker'
+        else:
+            item['current_user_role'] = 'viewer'
+
+    if conn:
+        job_pk = item['id']
+
+        # 1. Associated Workers List
+        w_rows = conn.execute(
+            "SELECT * FROM labour_workers WHERE labour_job_id = ? ORDER BY id ASC",
+            (job_pk,)
+        ).fetchall()
+        item['workers'] = [dict(w) for w in w_rows]
+
+        # 2. Attendance Records
+        att_rows = conn.execute(
+            """SELECT a.*, u.name as created_by_name
+               FROM labour_attendance a
+               LEFT JOIN users u ON a.created_by = u.id
+               WHERE a.labour_job_id = ?
+               ORDER BY a.date DESC, a.id DESC""",
+            (job_pk,)
+        ).fetchall()
+        item['attendance'] = [dict(a) for a in att_rows]
+
+        # 3. Payments History
+        pay_rows = conn.execute(
+            """SELECT p.*, u.name as farmer_name
+               FROM labour_payments p
+               LEFT JOIN users u ON p.farmer_id = u.id
+               WHERE p.labour_job_id = ?
+               ORDER BY p.payment_date DESC, p.id DESC""",
+            (job_pk,)
+        ).fetchall()
+        item['payments'] = [dict(p) for p in pay_rows]
+
+        # 4. Advances History
+        adv_rows = conn.execute(
+            """SELECT adv.*, u.name as farmer_name
+               FROM labour_advances adv
+               LEFT JOIN users u ON adv.farmer_id = u.id
+               WHERE adv.labour_job_id = ?
+               ORDER BY adv.advance_date DESC, adv.id DESC""",
+            (job_pk,)
+        ).fetchall()
+        item['advances'] = [dict(adv) for adv in adv_rows]
+
+        # 5. Disputes
+        disp_rows = conn.execute(
+            """SELECT d.*, u.name as raised_by_name
+               FROM labour_disputes d
+               LEFT JOIN users u ON d.raised_by = u.id
+               WHERE d.labour_job_id = ?
+               ORDER BY d.id DESC""",
+            (job_pk,)
+        ).fetchall()
+        item['disputes'] = [dict(d) for d in disp_rows]
+
+        # 6. Work Agreement
+        agr_row = conn.execute(
+            "SELECT * FROM labour_agreements WHERE labour_job_id = ? ORDER BY id DESC LIMIT 1",
+            (job_pk,)
+        ).fetchone()
+        if agr_row:
+            item['agreement'] = dict(agr_row)
+
+        # 7. Events Timeline
+        events_rows = conn.execute(
+            """SELECT e.*, u.name as performed_by_name
+               FROM labour_work_events e
+               LEFT JOIN users u ON e.performed_by = u.id
+               WHERE e.labour_job_id = ?
+               ORDER BY e.id ASC""",
+            (job_pk,)
+        ).fetchall()
+        events = [dict(ev) for ev in events_rows]
+        item['events'] = events
+
+        # 8. Live Active Seconds
+        live_active_seconds = compute_job_timeline_and_seconds(
+            events,
+            current_status=item.get('status'),
+            total_working_seconds=item.get('total_working_seconds')
+        )
+        item['live_active_seconds'] = live_active_seconds
+
+        # 9. Parties Info
+        farmer_row = conn.execute("SELECT name, email, location FROM users WHERE id = ?", (item['farmer_id'],)).fetchone()
+        if farmer_row:
+            item['farmer_name'] = farmer_row['name']
+            item['farmer_email'] = farmer_row['email']
+            item['farmer_location'] = farmer_row['location']
+
+        if item.get('worker_id'):
+            worker_user = conn.execute("SELECT name, email FROM users WHERE id = ?", (item['worker_id'],)).fetchone()
+            if worker_user:
+                item['worker_user_name'] = worker_user['name']
+                item['worker_email'] = worker_user['email']
+
+        # 10. Linked Farm Expense
+        if item.get('expense_id'):
+            exp_row = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (item['expense_id'],)).fetchone()
+            if exp_row:
+                item['expense'] = dict(exp_row)
+
+    return item
+
+
+@app.route('/labour-work')
+def page_labour_work():
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    dist_index = os.path.join(app.root_path, 'dist', 'index.html')
+    if os.path.exists(dist_index):
+        return send_from_directory(os.path.join(app.root_path, 'dist'), 'index.html')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/api/labour/jobs', methods=['GET'])
+def api_get_labour_jobs():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view labour work records.'}), 401
+
+    uid = user['id']
+    role = request.args.get('role', 'all').strip().lower()
+    status = request.args.get('status', '').strip().upper()
+    crop = request.args.get('crop', '').strip()
+
+    conn = get_db()
+    query = """
+        SELECT l.*, 
+               f.name as farmer_name, 
+               w.name as worker_user_name
+        FROM labour_jobs l
+        JOIN users f ON l.farmer_id = f.id
+        LEFT JOIN users w ON l.worker_id = w.id
+        WHERE 1=1
+    """
+    params = []
+
+    if role == 'farmer':
+        query += " AND l.farmer_id = ?"
+        params.append(uid)
+    elif role == 'worker':
+        query += " AND (l.worker_id = ? OR l.worker_name = ?)"
+        params.append(uid)
+        params.append(user['name'])
+    else:
+        # Default: user is farmer or worker on the job
+        query += " AND (l.farmer_id = ? OR l.worker_id = ? OR l.worker_name = ?)"
+        params.append(uid)
+        params.append(uid)
+        params.append(user['name'])
+
+    if status:
+        query += " AND l.status = ?"
+        params.append(status)
+
+    if crop:
+        query += " AND l.crop = ?"
+        params.append(crop)
+
+    query += " ORDER BY l.id DESC"
+
+    rows = conn.execute(query, params).fetchall()
+    jobs = [serialize_labour_job(r, user_id=uid, conn=conn) for r in rows]
+    conn.close()
+
+    return jsonify({'success': True, 'jobs': jobs, 'count': len(jobs)})
+
+
+@app.route('/api/labour/jobs', methods=['POST'])
+def api_create_labour_job():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to create a labour job.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    work_date = str(data.get('work_date', '')).strip()
+    work_type = str(data.get('work_type', '')).strip()
+    crop = str(data.get('crop', '')).strip()
+    field_name = str(data.get('field_name', '')).strip()
+    worker_name = str(data.get('worker_name', '')).strip() or 'Agricultural Worker'
+    worker_phone = str(data.get('worker_phone', '')).strip() or None
+    payment_type = str(data.get('payment_type', 'per_day')).strip().lower()
+    rate_val = data.get('rate')
+    num_workers_val = data.get('num_workers', 1)
+    expected_start_date = str(data.get('expected_start_date', '')).strip() or work_date
+    expected_end_date = str(data.get('expected_end_date', '')).strip() or None
+    notes = str(data.get('notes', '')).strip() or None
+
+    if not work_date:
+        work_date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
+    if not crop:
+        return jsonify({'success': False, 'error': 'Crop name is required.'}), 400
+    if not field_name:
+        return jsonify({'success': False, 'error': 'Field name is required.'}), 400
+    if not work_type:
+        return jsonify({'success': False, 'error': 'Work type (e.g. Harvesting, Weeding) is required.'}), 400
+    if payment_type not in VALID_LABOUR_PAYMENT_TYPES:
+        return jsonify({'success': False, 'error': f"Invalid payment type. Must be one of: {', '.join(VALID_LABOUR_PAYMENT_TYPES)}"}), 400
+
+    try:
+        rate = float(rate_val)
+        if rate <= 0:
+            return jsonify({'success': False, 'error': 'Agreed rate must be greater than 0.'}), 400
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Please provide a valid numeric rate.'}), 400
+
+    try:
+        num_workers = max(1, int(num_workers_val))
+    except (TypeError, ValueError):
+        num_workers = 1
+
+    conn = get_db()
+    job_id = generate_labour_job_id(conn, work_date)
+    join_token = secrets.token_urlsafe(16)
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO labour_jobs (
+            job_id, join_token, farmer_id, worker_name, worker_phone,
+            work_type, crop, field_name, work_date, expected_start_date, expected_end_date,
+            payment_type, rate, num_workers, status, farmer_agreed, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREATED', 1, ?)
+    """, (
+        job_id, join_token, user['id'], worker_name, worker_phone,
+        work_type, crop, field_name, work_date, expected_start_date, expected_end_date,
+        payment_type, rate, num_workers, notes
+    ))
+    job_pk = cursor.lastrowid
+
+    # Create initial worker roster entry
+    cursor.execute("""
+        INSERT INTO labour_workers (labour_job_id, name, phone, role)
+        VALUES (?, ?, ?, 'worker')
+    """, (job_pk, worker_name, worker_phone))
+
+    # Create initial work agreement
+    terms_summary = f"{work_type} on {crop} ({field_name}) at ₹{rate:,.2f}/{payment_type.replace('_', ' ')} for {num_workers} worker(s)."
+    cursor.execute("""
+        INSERT INTO labour_agreements (labour_job_id, farmer_id, terms_summary, farmer_agreed_at, status)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'PENDING')
+    """, (job_pk, user['id'], terms_summary))
+
+    # Log creation event
+    cursor.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'CREATED', ?, ?, ?)
+    """, (job_pk, user['id'], server_now, f"Labour Job {job_id} created by {user['name']}"))
+
+    conn.commit()
+
+    recalculate_labour_job_finances(conn, job_pk)
+    created_row = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_pk,)).fetchone()
+    serialized = serialize_labour_job(created_row, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Labour Job {job_id} created successfully.",
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/labour/jobs/<identifier>', methods=['GET'])
+def api_get_labour_job_detail(identifier):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view labour job details.'}), 401
+
+    conn = get_db()
+    row = None
+    if str(identifier).isdigit():
+        row = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (int(identifier),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM labour_jobs WHERE UPPER(job_id) = ?", (identifier.upper(),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM labour_jobs WHERE join_token = ?", (identifier,)).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Labour job not found.'}), 404
+
+    serialized = serialize_labour_job(row, user_id=user['id'], conn=conn)
+    conn.close()
+
+    # Allow preview for joining, or full access if authorized
+    return jsonify({'success': True, 'job': serialized})
+
+
+@app.route('/api/labour/jobs/<identifier>/join', methods=['POST'])
+def api_join_labour_job(identifier):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to join this labour job.'}), 401
+
+    conn = get_db()
+    row = None
+    if str(identifier).isdigit():
+        row = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (int(identifier),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM labour_jobs WHERE UPPER(job_id) = ?", (identifier.upper(),)).fetchone()
+    if not row:
+        row = conn.execute("SELECT * FROM labour_jobs WHERE join_token = ?", (identifier,)).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Labour job not found.'}), 404
+
+    job_pk = row['id']
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    worker_user_name = user['name']
+
+    # Update job worker_id
+    conn.execute("""
+        UPDATE labour_jobs
+        SET worker_id = ?, status = CASE WHEN status = 'CREATED' THEN 'WORKER_JOINED' ELSE status END, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (user['id'], job_pk))
+
+    # Update worker roster record or create one
+    existing_w = conn.execute(
+        "SELECT id FROM labour_workers WHERE labour_job_id = ? AND (user_id = ? OR name = ?)",
+        (job_pk, user['id'], worker_user_name)
+    ).fetchone()
+    if existing_w:
+        conn.execute("UPDATE labour_workers SET user_id = ?, name = ? WHERE id = ?", (user['id'], worker_user_name, existing_w['id']))
+    else:
+        conn.execute("INSERT INTO labour_workers (labour_job_id, user_id, name, role) VALUES (?, ?, ?, 'worker')", (job_pk, user['id'], worker_user_name))
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'WORKER_JOINED', ?, ?, ?)
+    """, (job_pk, user['id'], server_now, f"Worker {worker_user_name} joined job {row['job_id']}"))
+
+    conn.commit()
+
+    recalculate_labour_job_finances(conn, job_pk)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_pk,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Joined labour job {row['job_id']} successfully.",
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/agree', methods=['POST'])
+def api_agree_labour_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to confirm agreement.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    is_farmer = (user['id'] == job['farmer_id'])
+    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+
+    if not is_farmer and not is_worker:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to agree to this job.'}), 403
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    farmer_agreed = job['farmer_agreed'] or (1 if is_farmer else 0)
+    worker_agreed = job['worker_agreed'] or (1 if is_worker else 0)
+
+    both_agreed = (farmer_agreed and worker_agreed)
+    new_status = 'AGREED' if both_agreed and job['status'] in ('CREATED', 'WORKER_JOINED') else job['status']
+
+    conn.execute("""
+        UPDATE labour_jobs
+        SET farmer_agreed = ?, worker_agreed = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (farmer_agreed, worker_agreed, new_status, job_id))
+
+    # Update agreements table
+    if is_farmer:
+        conn.execute("UPDATE labour_agreements SET farmer_agreed_at = CURRENT_TIMESTAMP WHERE labour_job_id = ?", (job_id,))
+    if is_worker:
+        conn.execute("UPDATE labour_agreements SET worker_id = ?, worker_agreed_at = CURRENT_TIMESTAMP WHERE labour_job_id = ?", (user['id'], job_id))
+
+    if both_agreed:
+        conn.execute("UPDATE labour_agreements SET status = 'AGREED' WHERE labour_job_id = ?", (job_id,))
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'AGREED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Agreement accepted by {user['name']} ({'Farmer' if is_farmer else 'Worker'})"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    msg = "Work agreement finalized by both parties!" if both_agreed else f"Agreement confirmed by {user['name']}. Awaiting counterparty confirmation."
+    return jsonify({
+        'success': True,
+        'message': msg,
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/attendance', methods=['POST'])
+def api_mark_labour_attendance(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to mark attendance.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    is_farmer = (user['id'] == job['farmer_id'])
+    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    if not is_farmer and not is_worker:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] == 'COMPLETED':
+        conn.close()
+        return jsonify({'success': False, 'error': 'This job is already finalized. To record adjustments, raise a dispute/correction.'}), 400
+
+    data = request.get_json(silent=True) or {}
+    att_date = str(data.get('date', '')).strip()
+    if not att_date:
+        att_date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
+
+    worker_name = str(data.get('worker_name', '')).strip() or job['worker_name']
+    worker_id = data.get('worker_id')
+    status = str(data.get('status', 'PRESENT')).strip().upper()
+    notes = str(data.get('notes', '')).strip() or None
+
+    if status not in ('PRESENT', 'HALF_DAY', 'ABSENT'):
+        conn.close()
+        return jsonify({'success': False, 'error': "Attendance status must be 'PRESENT', 'HALF_DAY', or 'ABSENT'."}), 400
+
+    # Calculate day fraction
+    if status == 'PRESENT':
+        day_fraction = 1.0
+    elif status == 'HALF_DAY':
+        day_fraction = 0.5
+    else:
+        day_fraction = 0.0
+
+    hours_worked = float(data.get('hours_worked', 8.0 if status == 'PRESENT' else (4.0 if status == 'HALF_DAY' else 0.0)))
+
+    # Determine rate applied
+    rate_applied = float(job['rate'] or 0.0)
+    if data.get('rate_applied') is not None:
+        try:
+            rate_applied = float(data.get('rate_applied'))
+        except (TypeError, ValueError):
+            pass
+
+    # Wage calculation
+    if job['payment_type'] == 'per_day':
+        wage_amount = round(day_fraction * rate_applied, 2)
+    elif job['payment_type'] == 'per_hour':
+        wage_amount = round(hours_worked * rate_applied, 2)
+    else:
+        wage_amount = round(rate_applied, 2) if status != 'ABSENT' else 0.0
+
+    # Check for duplicate attendance on the same date for this worker
+    existing = conn.execute(
+        "SELECT id FROM labour_attendance WHERE labour_job_id = ? AND worker_name = ? AND date = ?",
+        (job_id, worker_name, att_date)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'success': False, 'error': f"Attendance already recorded for '{worker_name}' on {att_date}."}), 400
+
+    # Locate worker_id pk in roster if not supplied
+    if not worker_id:
+        w_row = conn.execute(
+            "SELECT id FROM labour_workers WHERE labour_job_id = ? AND name = ?",
+            (job_id, worker_name)
+        ).fetchone()
+        if w_row:
+            worker_id = w_row['id']
+        else:
+            # Create worker entry in roster
+            cur = conn.cursor()
+            cur.execute("INSERT INTO labour_workers (labour_job_id, name, role) VALUES (?, ?, 'worker')", (job_id, worker_name))
+            worker_id = cur.lastrowid
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO labour_attendance (
+            labour_job_id, worker_id, worker_name, date, status,
+            day_fraction, hours_worked, rate_applied, wage_amount, notes, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        job_id, worker_id, worker_name, att_date, status,
+        day_fraction, hours_worked, rate_applied, wage_amount, notes, user['id']
+    ))
+    att_pk = cursor.lastrowid
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    cursor.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'ATTENDANCE_MARKED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Attendance for {worker_name} on {att_date}: {status} (₹{wage_amount:,.2f})"))
+
+    # Update job status to IN_PROGRESS if CREATED or AGREED
+    if job['status'] in ('CREATED', 'WORKER_JOINED', 'AGREED'):
+        cursor.execute("UPDATE labour_jobs SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (job_id,))
+
+    conn.commit()
+
+    recalculate_labour_job_finances(conn, job_id)
+    updated_job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated_job, user_id=user['id'], conn=conn)
+    created_att = conn.execute("SELECT * FROM labour_attendance WHERE id = ?", (att_pk,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Marked {status} for {worker_name} on {att_date}. Wage: ₹{wage_amount:,.2f}",
+        'attendance': dict(created_att),
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/labour/jobs/<int:job_id>/attendance', methods=['GET'])
+def api_get_labour_attendance(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    rows = conn.execute(
+        """SELECT a.*, u.name as created_by_name
+           FROM labour_attendance a
+           LEFT JOIN users u ON a.created_by = u.id
+           WHERE a.labour_job_id = ?
+           ORDER BY a.date DESC, a.id DESC""",
+        (job_id,)
+    ).fetchall()
+    att_list = [dict(r) for r in rows]
+    conn.close()
+
+    return jsonify({'success': True, 'attendance': att_list, 'count': len(att_list)})
+
+
+@app.route('/api/labour/jobs/<int:job_id>/start', methods=['POST'])
+def api_start_labour_timer(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['worker_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] in ('COMPLETED', 'DISPUTED'):
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot start timer when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("UPDATE labour_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (job_id,))
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'STARTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work timer started by {user['name']} at {server_now}"))
+
+    # Session record
+    conn.execute("""
+        INSERT INTO labour_work_sessions (labour_job_id, session_type, start_time, status)
+        VALUES (?, 'HOURLY_WORK', ?, 'RUNNING')
+    """, (job_id, server_now))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Labour work timer is now RUNNING.',
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/pause', methods=['POST'])
+def api_pause_labour_timer(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['worker_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] != 'RUNNING':
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot pause work when status is '{job['status']}'."}), 400
+
+    data = request.get_json(silent=True) or {}
+    pause_notes = str(data.get('notes', 'Lunch / Break / Rest')).strip() or 'Break'
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'PAUSED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work paused by {user['name']}: {pause_notes}"))
+
+    conn.execute("UPDATE labour_jobs SET status = 'PAUSED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (job_id,))
+
+    # Break record
+    conn.execute("""
+        INSERT INTO labour_breaks (labour_job_id, start_time, reason)
+        VALUES (?, ?, ?)
+    """, (job_id, server_now, pause_notes))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Labour timer PAUSED. Break time will not be billed.',
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/resume', methods=['POST'])
+def api_resume_labour_timer(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['worker_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] != 'PAUSED':
+        conn.close()
+        return jsonify({'success': False, 'error': f"Cannot resume work when status is '{job['status']}'."}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Close open break
+    open_break = conn.execute(
+        "SELECT id, start_time FROM labour_breaks WHERE labour_job_id = ? AND end_time IS NULL ORDER BY id DESC LIMIT 1",
+        (job_id,)
+    ).fetchone()
+    if open_break:
+        b_start = parse_iso_ts(open_break['start_time'])
+        b_end = parse_iso_ts(server_now)
+        b_dur = max(0, int((b_end - b_start).total_seconds())) if b_start and b_end else 0
+        conn.execute("UPDATE labour_breaks SET end_time = ?, duration_seconds = ? WHERE id = ?", (server_now, b_dur, open_break['id']))
+
+    conn.execute("UPDATE labour_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (job_id,))
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'RESUMED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work resumed by {user['name']} at {server_now}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Labour timer RESUMED.',
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/finish', methods=['POST'])
+def api_finish_labour_timer(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['worker_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    if job['status'] == 'COMPLETED':
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job already completed.'}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    is_farmer = (user['id'] == job['farmer_id'])
+
+    farmer_conf = 1 if is_farmer else job['farmer_confirmed']
+    worker_conf = 1 if not is_farmer else job['worker_confirmed']
+
+    conn.execute("""
+        UPDATE labour_jobs
+        SET status = 'FINISH_REQUESTED',
+            farmer_confirmed = ?,
+            worker_confirmed = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (farmer_conf, worker_conf, job_id))
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'FINISH_REQUESTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Completion requested by {user['name']}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Completion requested. Awaiting counterparty confirmation.',
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/confirm-finish', methods=['POST'])
+def api_confirm_finish_labour_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    is_farmer = (user['id'] == job['farmer_id'])
+    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    if not is_farmer and not is_worker:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    farmer_conf = 1 if is_farmer else job['farmer_confirmed']
+    worker_conf = 1 if is_worker else job['worker_confirmed']
+
+    # Both confirmed or farmer finalizing work record
+    conn.execute("""
+        UPDATE labour_jobs
+        SET status = 'COMPLETED',
+            farmer_confirmed = 1,
+            worker_confirmed = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (job_id,))
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'FINISHED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Work confirmed COMPLETED and finalized by {user['name']} at {server_now}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"✅ Work Record Finalized! Job {job['job_id']} is officially COMPLETED. Total Cost: ₹{serialized['total_earned']:,.2f}",
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/payment', methods=['POST'])
+def api_record_labour_payment(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to record a payment.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Only the farmer can record wage payments.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    amount_val = data.get('amount')
+    payment_date = str(data.get('payment_date', '')).strip()
+    if not payment_date:
+        payment_date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
+    payment_method = str(data.get('payment_method', 'Cash')).strip()
+    reference_no = str(data.get('reference_no', '')).strip() or None
+    notes = str(data.get('notes', '')).strip() or None
+    worker_name = str(data.get('worker_name', '')).strip() or job['worker_name']
+    worker_id = data.get('worker_id')
+
+    try:
+        amount = float(amount_val)
+        if amount <= 0:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Payment amount must be greater than 0.'}), 400
+    except (TypeError, ValueError):
+        conn.close()
+        return jsonify({'success': False, 'error': 'Please provide a valid payment amount.'}), 400
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO labour_payments (
+            labour_job_id, worker_id, worker_name, farmer_id,
+            amount, payment_date, payment_method, reference_no, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (job_id, worker_id, worker_name, user['id'], amount, payment_date, payment_method, reference_no, notes))
+    pay_pk = cursor.lastrowid
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    cursor.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'PAYMENT_RECORDED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Payment of ₹{amount:,.2f} recorded to {worker_name} via {payment_method}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated_job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated_job, user_id=user['id'], conn=conn)
+    created_pay = conn.execute("SELECT * FROM labour_payments WHERE id = ?", (pay_pk,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Payment of ₹{amount:,.2f} successfully recorded for {worker_name}. Remaining balance: ₹{serialized['pending_amount']:,.2f}",
+        'payment': dict(created_pay),
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/labour/jobs/<int:job_id>/advance', methods=['POST'])
+def api_record_labour_advance(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to record an advance.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Only the farmer can record advance payments.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    amount_val = data.get('amount')
+    advance_date = str(data.get('advance_date', '')).strip()
+    if not advance_date:
+        advance_date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
+    payment_method = str(data.get('payment_method', 'Cash')).strip()
+    reference_no = str(data.get('reference_no', '')).strip() or None
+    notes = str(data.get('notes', '')).strip() or None
+    worker_name = str(data.get('worker_name', '')).strip() or job['worker_name']
+    worker_id = data.get('worker_id')
+
+    try:
+        amount = float(amount_val)
+        if amount <= 0:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Advance amount must be greater than 0.'}), 400
+    except (TypeError, ValueError):
+        conn.close()
+        return jsonify({'success': False, 'error': 'Please provide a valid advance amount.'}), 400
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO labour_advances (
+            labour_job_id, worker_id, worker_name, farmer_id,
+            amount, advance_date, payment_method, reference_no, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (job_id, worker_id, worker_name, user['id'], amount, advance_date, payment_method, reference_no, notes))
+    adv_pk = cursor.lastrowid
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    cursor.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'ADVANCE_GIVEN', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Advance of ₹{amount:,.2f} given to {worker_name} via {payment_method}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated_job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated_job, user_id=user['id'], conn=conn)
+    created_adv = conn.execute("SELECT * FROM labour_advances WHERE id = ?", (adv_pk,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Advance of ₹{amount:,.2f} successfully recorded for {worker_name}. Remaining balance: ₹{serialized['pending_amount']:,.2f}",
+        'advance': dict(created_adv),
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/labour/jobs/<int:job_id>/dispute', methods=['POST'])
+def api_dispute_labour_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to raise a dispute.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    is_farmer = (user['id'] == job['farmer_id'])
+    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    if not is_farmer and not is_worker:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    reason = str(data.get('reason', '')).strip()
+    description = str(data.get('description', '')).strip()
+    evidence_text = str(data.get('evidence_text', '')).strip() or None
+
+    if not reason:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Dispute reason is required.'}), 400
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        INSERT INTO labour_disputes (labour_job_id, raised_by, reason, description, evidence_text, status)
+        VALUES (?, ?, ?, ?, ?, 'OPEN')
+    """, (job_id, user['id'], reason, description, evidence_text))
+
+    conn.execute("UPDATE labour_jobs SET status = 'DISPUTED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (job_id,))
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'DISPUTED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Dispute raised by {user['name']}: {reason} - {description}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Dispute registered. Status updated to DISPUTED.',
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/resolve-dispute', methods=['POST'])
+def api_resolve_dispute_labour_job(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to resolve dispute.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    is_farmer = (user['id'] == job['farmer_id'])
+    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    if not is_farmer and not is_worker:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    resolution = str(data.get('resolution', 'Mutual agreement reached')).strip()
+    next_status = str(data.get('next_status', 'AGREED')).strip().upper()
+    if next_status not in ('AGREED', 'IN_PROGRESS', 'RUNNING', 'PAUSED', 'COMPLETED'):
+        next_status = 'AGREED'
+
+    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn.execute("""
+        UPDATE labour_disputes
+        SET status = 'RESOLVED', resolution = ?, resolved_at = CURRENT_TIMESTAMP
+        WHERE labour_job_id = ? AND status IN ('OPEN', 'UNDER_REVIEW')
+    """, (resolution, job_id))
+
+    conn.execute("UPDATE labour_jobs SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (next_status, job_id))
+
+    conn.execute("""
+        INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
+        VALUES (?, 'DISPUTE_RESOLVED', ?, ?, ?)
+    """, (job_id, user['id'], server_now, f"Dispute resolved by {user['name']}: {resolution}"))
+
+    conn.commit()
+    recalculate_labour_job_finances(conn, job_id)
+    updated = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Dispute resolved. Status updated to {next_status}.",
+        'job': serialized
+    })
+
+
+@app.route('/api/labour/jobs/<int:job_id>/add-to-expenses', methods=['POST'])
+def api_add_labour_to_expenses(job_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to record farm expenses.'}), 401
+
+    conn = get_db()
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Labour job not found.'}), 404
+
+    if user['id'] != job['farmer_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Only the farmer can record this expense.'}), 403
+
+    if job['expense_id']:
+        existing_exp = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (job['expense_id'],)).fetchone()
+        conn.close()
+        return jsonify({
+            'success': True,
+            'message': 'This labour work is already recorded in Farm Expenses.',
+            'expense': dict(existing_exp) if existing_exp else None,
+            'already_added': True
+        })
+
+    recalculate_labour_job_finances(conn, job_id)
+    job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    amount = float(job['total_earned'] if job['total_earned'] > 0 else (job['rate'] * max(1, job['num_workers'])))
+    desc = f"Labour work — {job['work_type']} ({job['job_id']}, {job['worker_name']}, {job['num_workers']} workers, ₹{job['rate']}/{job['payment_type']})"
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO farm_expenses (user_id, date, category, amount, crop, field_name, description)
+        VALUES (?, ?, 'Labour', ?, ?, ?, ?)
+    """, (user['id'], job['work_date'], amount, job['crop'], job['field_name'], desc))
+    exp_id = cursor.lastrowid
+
+    cursor.execute("""
+        UPDATE labour_jobs SET expense_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    """, (exp_id, job_id))
+
+    conn.commit()
+
+    created_exp = conn.execute("SELECT * FROM farm_expenses WHERE id = ?", (exp_id,)).fetchone()
+    updated_job = conn.execute("SELECT * FROM labour_jobs WHERE id = ?", (job_id,)).fetchone()
+    serialized = serialize_labour_job(updated_job, user_id=user['id'], conn=conn)
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Added ₹{amount:,.2f} to Farm Expenses under category 'Labour'.",
+        'expense': dict(created_exp),
+        'job': serialized
+    }), 201
+
+
+@app.route('/api/labour/worker-history/<path:worker_identifier>', methods=['GET'])
+def api_get_labour_worker_history(worker_identifier):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    w_query = unquote(worker_identifier).strip()
+    conn = get_db()
+
+    # Find matching attendance and job records for this farmer
+    att_rows = conn.execute("""
+        SELECT a.*, j.job_id, j.crop, j.field_name, j.work_type, j.rate, j.payment_type, j.status as job_status
+        FROM labour_attendance a
+        JOIN labour_jobs j ON a.labour_job_id = j.id
+        WHERE j.farmer_id = ? AND (LOWER(a.worker_name) = LOWER(?) OR CAST(a.worker_id AS TEXT) = ?)
+        ORDER BY a.date DESC
+    """, (user['id'], w_query, w_query)).fetchall()
+
+    # Find jobs where worker is designated
+    jobs_rows = conn.execute("""
+        SELECT * FROM labour_jobs
+        WHERE farmer_id = ? AND (LOWER(worker_name) = LOWER(?) OR CAST(worker_id AS TEXT) = ?)
+        ORDER BY work_date DESC
+    """, (user['id'], w_query, w_query)).fetchall()
+
+    pay_rows = conn.execute("""
+        SELECT p.*, j.job_id, j.crop
+        FROM labour_payments p
+        JOIN labour_jobs j ON p.labour_job_id = j.id
+        WHERE j.farmer_id = ? AND (LOWER(p.worker_name) = LOWER(?) OR CAST(p.worker_id AS TEXT) = ?)
+        ORDER BY p.payment_date DESC
+    """, (user['id'], w_query, w_query)).fetchall()
+
+    adv_rows = conn.execute("""
+        SELECT adv.*, j.job_id, j.crop
+        FROM labour_advances adv
+        JOIN labour_jobs j ON adv.labour_job_id = j.id
+        WHERE j.farmer_id = ? AND (LOWER(adv.worker_name) = LOWER(?) OR CAST(adv.worker_id AS TEXT) = ?)
+        ORDER BY adv.advance_date DESC
+    """, (user['id'], w_query, w_query)).fetchall()
+
+    total_days = sum(float(r['day_fraction'] or 0.0) for r in att_rows)
+    total_hours = sum(float(r['hours_worked'] or 0.0) for r in att_rows)
+    total_earned = sum(float(r['wage_amount'] or 0.0) for r in att_rows)
+    if not att_rows and jobs_rows:
+        total_earned = sum(float(j['total_earned'] or 0.0) for j in jobs_rows)
+
+    total_paid = sum(float(p['amount'] or 0.0) for p in pay_rows)
+    total_advances = sum(float(a['amount'] or 0.0) for a in adv_rows)
+    pending_amount = max(0.0, round(total_earned - (total_paid + total_advances), 2))
+
+    # Crop breakdown
+    crop_stats = {}
+    for r in att_rows:
+        c = r['crop'] or 'Other'
+        if c not in crop_stats:
+            crop_stats[c] = {'crop': c, 'days': 0.0, 'earned': 0.0, 'jobs': set()}
+        crop_stats[c]['days'] += float(r['day_fraction'] or 0.0)
+        crop_stats[c]['earned'] += float(r['wage_amount'] or 0.0)
+        crop_stats[c]['jobs'].add(r['job_id'])
+
+    crop_summary = [
+        {'crop': k, 'days': round(v['days'], 2), 'earned': round(v['earned'], 2), 'jobs_count': len(v['jobs'])}
+        for k, v in crop_stats.items()
+    ]
+
+    worker_display_name = w_query
+    if att_rows:
+        worker_display_name = att_rows[0]['worker_name']
+    elif jobs_rows:
+        worker_display_name = jobs_rows[0]['worker_name']
+
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'worker': {
+            'name': worker_display_name,
+            'total_jobs': len(jobs_rows) if jobs_rows else len(set(r['labour_job_id'] for r in att_rows)),
+            'total_days': round(total_days, 2),
+            'total_hours': round(total_hours, 2),
+            'total_earned': round(total_earned, 2),
+            'total_paid': round(total_paid, 2),
+            'total_advances': round(total_advances, 2),
+            'pending_amount': pending_amount,
+            'crop_breakdown': crop_summary,
+            'recent_attendance': [dict(r) for r in att_rows[:15]],
+            'recent_payments': [dict(p) for p in pay_rows[:10]],
+            'recent_advances': [dict(a) for a in adv_rows[:10]],
+            'recent_jobs': [dict(j) for j in jobs_rows[:10]]
+        }
+    })
+
+
+@app.route('/api/labour/summary', methods=['GET'])
+def api_get_labour_summary():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in.'}), 401
+
+    uid = user['id']
+    conn = get_db()
+    current_month = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m')
+
+    active_jobs_count = conn.execute(
+        "SELECT COUNT(*) as c FROM labour_jobs WHERE farmer_id = ? AND status IN ('CREATED', 'WORKER_JOINED', 'AGREED', 'IN_PROGRESS', 'RUNNING', 'PAUSED', 'FINISH_REQUESTED', 'DISPUTED')",
+        (uid,)
+    ).fetchone()['c']
+
+    completed_jobs_count = conn.execute(
+        "SELECT COUNT(*) as c FROM labour_jobs WHERE farmer_id = ? AND status = 'COMPLETED'",
+        (uid,)
+    ).fetchone()['c']
+
+    total_workers_count = conn.execute(
+        "SELECT COUNT(DISTINCT a.worker_name) as c FROM labour_attendance a JOIN labour_jobs j ON a.labour_job_id = j.id WHERE j.farmer_id = ?",
+        (uid,)
+    ).fetchone()['c']
+    if total_workers_count == 0:
+        total_workers_count = conn.execute(
+            "SELECT COUNT(DISTINCT worker_name) as c FROM labour_jobs WHERE farmer_id = ?",
+            (uid,)
+        ).fetchone()['c']
+
+    fin_row = conn.execute("""
+        SELECT COALESCE(SUM(total_earned), 0) as total_cost,
+               COALESCE(SUM(total_paid), 0) as total_paid,
+               COALESCE(SUM(total_advance), 0) as total_advance,
+               COALESCE(SUM(pending_amount), 0) as pending_amount
+        FROM labour_jobs
+        WHERE farmer_id = ?
+    """, (uid,)).fetchone()
+
+    month_cost_row = conn.execute("""
+        SELECT COALESCE(SUM(total_earned), 0) as m_cost
+        FROM labour_jobs
+        WHERE farmer_id = ? AND work_date LIKE ?
+    """, (uid, f"{current_month}%")).fetchone()
+
+    crop_rows = conn.execute("""
+        SELECT crop, 
+               COALESCE(SUM(total_earned), 0) as total_cost,
+               COALESCE(SUM(total_days_worked), 0) as total_days,
+               COUNT(*) as jobs_count
+        FROM labour_jobs
+        WHERE farmer_id = ?
+        GROUP BY crop
+        ORDER BY total_cost DESC
+    """, (uid,)).fetchall()
+
+    recent_events = conn.execute("""
+        SELECT e.*, j.job_id, j.crop, j.work_type, u.name as performed_by_name
+        FROM labour_work_events e
+        JOIN labour_jobs j ON e.labour_job_id = j.id
+        JOIN users u ON e.performed_by = u.id
+        WHERE j.farmer_id = ?
+        ORDER BY e.id DESC LIMIT 8
+    """, (uid,)).fetchall()
+
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'summary': {
+            'active_jobs': active_jobs_count,
+            'completed_jobs': completed_jobs_count,
+            'total_workers': total_workers_count,
+            'total_labour_cost': round(float(fin_row['total_cost'] or 0.0), 2),
+            'total_paid': round(float(fin_row['total_paid'] or 0.0), 2),
+            'total_advance': round(float(fin_row['total_advance'] or 0.0), 2),
+            'pending_payments': round(float(fin_row['pending_amount'] or 0.0), 2),
+            'month_cost': round(float(month_cost_row['m_cost'] or 0.0), 2),
+            'current_month': current_month,
+            'crop_expenses': [dict(c) for c in crop_rows],
+            'recent_activities': [dict(ev) for ev in recent_events]
+        }
+    })
+
+
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '0.0.0.0')
     port = int(os.getenv('FLASK_PORT', 5000))
@@ -4415,3 +6546,4 @@ if __name__ == '__main__':
     if not debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         threading.Timer(1.0, lambda: webbrowser.open(app_url)).start()
     app.run(host=host, debug=debug, port=port)
+

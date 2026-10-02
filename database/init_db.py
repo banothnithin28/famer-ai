@@ -55,6 +55,33 @@ def init_db(db_path=None):
     if 'symptoms' not in disease_scan_columns:
         cursor.execute("ALTER TABLE disease_scans ADD COLUMN symptoms TEXT")
 
+    # Check and add bill scanning columns to farm_expenses if missing
+    cursor.execute("PRAGMA table_info(farm_expenses)")
+    expense_columns = [col[1] for col in cursor.fetchall()]
+    if 'bill_number' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN bill_number TEXT")
+    if 'vendor_name' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN vendor_name TEXT")
+    if 'vendor_phone' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN vendor_phone TEXT")
+    if 'vendor_address' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN vendor_address TEXT")
+    if 'receipt_source' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN receipt_source TEXT DEFAULT 'MANUAL'")
+    if 'raw_extracted_json' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN raw_extracted_json TEXT")
+    if 'tax' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN tax REAL DEFAULT 0.0")
+    if 'discount' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN discount REAL DEFAULT 0.0")
+    if 'payment_method' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN payment_method TEXT")
+    if 'scanned_at' not in expense_columns:
+        cursor.execute("ALTER TABLE farm_expenses ADD COLUMN scanned_at TIMESTAMP")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_farm_expenses_user_bill ON farm_expenses(user_id, bill_number)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_farm_expenses_user_source ON farm_expenses(user_id, receipt_source)")
+    print("[OK] Migrated farm_expenses table with bill scanning columns and indexes")
+
     conn.commit()
     conn.close()
     print(f"[OK] SQLite Database initialized at {db_path}")

@@ -10,6 +10,7 @@ import AIChatbot from './components/AIChatbot';
 import FarmerTools from './components/FarmerTools';
 import FarmDiary from './components/FarmDiary';
 import TractorTracker from './components/TractorTracker';
+import LabourTracker from './components/LabourTracker';
 import AuthModal from './components/AuthModal';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
@@ -305,6 +306,14 @@ export default function App() {
         {/* 8. Tractor Work Tracker (🚜 Tractor Work) */}
         {activeTab === 'tractor' && (
           <TractorTracker
+            user={user}
+            onNavigateToDiary={() => navigateTo('diary')}
+          />
+        )}
+
+        {/* 9. Labour Work Tracker (👨‍🌾 Labour Work) */}
+        {activeTab === 'labour' && (
+          <LabourTracker
             user={user}
             onNavigateToDiary={() => navigateTo('diary')}
           />

@@ -213,6 +213,33 @@ export async function updateExpense(expenseId, expenseData) {
   });
 }
 
+export async function scanBillImage(imageFile) {
+  if (!(imageFile instanceof File || imageFile instanceof Blob)) {
+    throw new Error('Please select or upload a valid bill image file.');
+  }
+
+  const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/bmp']);
+  if (imageFile.type && !allowedTypes.has(imageFile.type.toLowerCase())) {
+    throw new Error('Please upload a JPG, JPEG, PNG, or WebP image.');
+  }
+
+  if (imageFile.size > 10 * 1024 * 1024) {
+    throw new Error('Image file size must be 10 MB or smaller.');
+  }
+
+  const formData = new FormData();
+  formData.append('bill_image', imageFile);
+
+  return request('/api/scan-bill', {
+    method: 'POST',
+    body: formData
+  });
+}
+
+export async function getScannedBills() {
+  return request('/api/scanned-bills', { method: 'GET' });
+}
+
 export async function deleteExpense(expenseId) {
   return request(`/api/expenses/${expenseId}`, {
     method: 'DELETE'
@@ -343,5 +370,123 @@ export async function getTractorJobEvents(jobId) {
 export async function getTractorSummary() {
   return request('/api/tractor/summary', { method: 'GET' });
 }
+
+// 10. Labour Work Tracker APIs (Phase 3)
+export async function getLabourJobs(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+  const qs = query.toString();
+  return request(`/api/labour/jobs${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+export async function createLabourJob(jobData) {
+  return request('/api/labour/jobs', {
+    method: 'POST',
+    body: JSON.stringify(jobData)
+  });
+}
+
+export async function getLabourJob(identifier) {
+  return request(`/api/labour/jobs/${encodeURIComponent(identifier)}`, { method: 'GET' });
+}
+
+export async function joinLabourJob(identifier) {
+  return request(`/api/labour/jobs/${encodeURIComponent(identifier)}/join`, {
+    method: 'POST'
+  });
+}
+
+export async function agreeLabourJob(jobId) {
+  return request(`/api/labour/jobs/${jobId}/agree`, {
+    method: 'POST'
+  });
+}
+
+export async function markLabourAttendance(jobId, attendanceData) {
+  return request(`/api/labour/jobs/${jobId}/attendance`, {
+    method: 'POST',
+    body: JSON.stringify(attendanceData)
+  });
+}
+
+export async function getLabourAttendance(jobId) {
+  return request(`/api/labour/jobs/${jobId}/attendance`, { method: 'GET' });
+}
+
+export async function startLabourTimer(jobId) {
+  return request(`/api/labour/jobs/${jobId}/start`, {
+    method: 'POST'
+  });
+}
+
+export async function pauseLabourTimer(jobId, notes = '') {
+  return request(`/api/labour/jobs/${jobId}/pause`, {
+    method: 'POST',
+    body: JSON.stringify({ notes })
+  });
+}
+
+export async function resumeLabourTimer(jobId) {
+  return request(`/api/labour/jobs/${jobId}/resume`, {
+    method: 'POST'
+  });
+}
+
+export async function finishLabourTimer(jobId) {
+  return request(`/api/labour/jobs/${jobId}/finish`, {
+    method: 'POST'
+  });
+}
+
+export async function confirmFinishLabourJob(jobId) {
+  return request(`/api/labour/jobs/${jobId}/confirm-finish`, {
+    method: 'POST'
+  });
+}
+
+export async function recordLabourPayment(jobId, paymentData) {
+  return request(`/api/labour/jobs/${jobId}/payment`, {
+    method: 'POST',
+    body: JSON.stringify(paymentData)
+  });
+}
+
+export async function recordLabourAdvance(jobId, advanceData) {
+  return request(`/api/labour/jobs/${jobId}/advance`, {
+    method: 'POST',
+    body: JSON.stringify(advanceData)
+  });
+}
+
+export async function disputeLabourJob(jobId, reason, description = '', evidence_text = '') {
+  return request(`/api/labour/jobs/${jobId}/dispute`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, description, evidence_text })
+  });
+}
+
+export async function resolveDisputeLabourJob(jobId, resolution, next_status = 'AGREED') {
+  return request(`/api/labour/jobs/${jobId}/resolve-dispute`, {
+    method: 'POST',
+    body: JSON.stringify({ resolution, next_status })
+  });
+}
+
+export async function addLabourToExpenses(jobId) {
+  return request(`/api/labour/jobs/${jobId}/add-to-expenses`, {
+    method: 'POST'
+  });
+}
+
+export async function getLabourWorkerHistory(workerIdentifier) {
+  return request(`/api/labour/worker-history/${encodeURIComponent(workerIdentifier)}`, { method: 'GET' });
+}
+
+export async function getLabourSummary() {
+  return request('/api/labour/summary', { method: 'GET' });
+}
+
 
 

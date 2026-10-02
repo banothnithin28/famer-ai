@@ -17,9 +17,10 @@ import {
   Scale,
   ArrowRight,
   Tractor,
+  Users,
 } from 'lucide-react';
 import FarmScene from './FarmScene';
-import { getPlants, getWeather, getFarmSummary, getTractorSummary } from '../services/apiService';
+import { getPlants, getWeather, getFarmSummary, getTractorSummary, getLabourSummary } from '../services/apiService';
 
 const DEFAULT_LOC = { latitude: 17.385, longitude: 78.487 };
 
@@ -34,6 +35,7 @@ export default function Dashboard({
   const [loadingWeather, setLoadingWeather] = useState(true);
   const [farmSummary, setFarmSummary] = useState(null);
   const [tractorSummary, setTractorSummary] = useState(null);
+  const [labourSummary, setLabourSummary] = useState(null);
 
   // Load actual plants count
   useEffect(() => {
@@ -94,6 +96,16 @@ export default function Dashboard({
       })
       .catch((err) => {
         console.warn('Failed to load tractor summary in dashboard:', err);
+      });
+
+    getLabourSummary()
+      .then((res) => {
+        if (isMounted && res?.success && res.summary) {
+          setLabourSummary(res.summary);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load labour summary in dashboard:', err);
       });
 
     return () => { isMounted = false; };
@@ -603,6 +615,94 @@ export default function Dashboard({
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span>Expenses: ₹{(tractorSummary?.farmer?.month_expenses || 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Section 6: 👨‍🌾 Labour Work Tracker */}
+          <div
+            className="card"
+            style={{
+              padding: '1.4rem',
+              borderRadius: 'var(--radius-xl)',
+              background: 'var(--surface)',
+              cursor: 'pointer',
+              transition: 'box-shadow 180ms ease, transform 180ms ease'
+            }}
+            onClick={() => setActiveTab && setActiveTab('labour')}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: 10,
+                  background: 'color-mix(in srgb, #3B82F6 12%, transparent)', color: '#3B82F6',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Users size={20} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
+                    Phase 3 Module
+                  </span>
+                  <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    👨‍🌾 Labour Work
+                  </h2>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary)' }}>
+                <span>Open Tracker</span>
+                <ArrowRight size={14} />
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                marginBottom: '0.6rem'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block' }}>
+                    Active Jobs:
+                  </span>
+                  <span style={{
+                    fontSize: '1.6rem', fontWeight: 900,
+                    color: (labourSummary?.active_jobs || 0) > 0 ? '#3B82F6' : 'var(--text-primary)',
+                    lineHeight: 1
+                  }}>
+                    {labourSummary?.active_jobs ?? 0}
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block' }}>
+                    Total Workers:
+                  </span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {labourSummary?.total_workers ?? 0}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.5rem',
+                fontSize: '0.78rem',
+                color: 'var(--text-secondary)',
+                borderTop: '1px solid var(--border)',
+                paddingTop: '0.65rem'
+              }}>
+                <div>
+                  <span style={{ color: (labourSummary?.total_pending || 0) > 0 ? '#DC2626' : 'inherit', fontWeight: 600 }}>
+                    Pending: ₹{(labourSummary?.total_pending || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span>Cost: ₹{(labourSummary?.total_cost || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

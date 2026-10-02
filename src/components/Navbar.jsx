@@ -13,6 +13,7 @@ import {
   Wrench,
   BookOpen,
   Tractor,
+  Users,
 } from 'lucide-react';
 
 const navItems = [
@@ -20,6 +21,7 @@ const navItems = [
   { id: 'plants',    label: 'My Plants', mobileLabel: 'Plants', icon: Sprout },
   { id: 'diary',     label: 'Farm Diary', mobileLabel: 'Diary', icon: BookOpen },
   { id: 'tractor',   label: 'Tractor Work', mobileLabel: 'Tractor', icon: Tractor },
+  { id: 'labour',    label: 'Labour Work', mobileLabel: 'Labour', icon: Users },
   { id: 'scanner',   label: 'Scan Plant', mobileLabel: 'Scan', icon: Camera, isPrimary: true },
   { id: 'weather',   label: 'Weather', mobileLabel: 'Weather', icon: CloudSun },
   { id: 'chat',      label: 'Farmer AI', mobileLabel: 'AI', icon: Bot },

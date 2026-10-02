@@ -46,8 +46,10 @@ import {
   updateIncome,
   deleteIncome,
   getFarmSummary,
-  getPlants
+  getPlants,
+  getScannedBills
 } from '../services/apiService';
+import ScanBillModal from './ScanBillModal';
 
 const ACTIVITY_TYPES = [
   'Sowing',
@@ -119,12 +121,16 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterActivity, setFilterActivity] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [filterSource, setFilterSource] = useState('');
 
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
   const [editingDiary, setEditingDiary] = useState(null);
 
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
+
+  const [scanBillModalOpen, setScanBillModalOpen] = useState(false);
+  const [viewReceiptModal, setViewReceiptModal] = useState(null);
 
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState(null);
@@ -203,19 +209,44 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
       const matchCategory = !filterCategory || exp.category === filterCategory;
       const matchCrop = !filterCrop || (exp.crop || '').toLowerCase().includes(filterCrop.toLowerCase());
       const matchMonth = !filterMonth || (exp.date || '').startsWith(filterMonth);
+      const matchSource = !filterSource || (exp.receipt_source || 'MANUAL').toUpperCase() === filterSource.toUpperCase();
       const matchSearch = !searchQuery.trim() || [
         exp.category,
         exp.crop,
         exp.field_name,
-        exp.description
+        exp.description,
+        exp.vendor_name,
+        exp.bill_number
       ].some(val => (val || '').toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchCategory && matchCrop && matchMonth && matchSearch;
+      return matchCategory && matchCrop && matchMonth && matchSource && matchSearch;
+    });
+  }, [expenses, filterCategory, filterCrop, filterMonth, filterSource, searchQuery]);
+
+  const scannedExpenses = useMemo(() => {
+    return expenses.filter(exp => {
+      const isScanned = (exp.receipt_source || '').toUpperCase() === 'SCANNED_RECEIPT' || exp.bill_number || exp.receipt_url;
+      const matchCategory = !filterCategory || exp.category === filterCategory;
+      const matchCrop = !filterCrop || (exp.crop || '').toLowerCase().includes(filterCrop.toLowerCase());
+      const matchMonth = !filterMonth || (exp.date || '').startsWith(filterMonth);
+      const matchSearch = !searchQuery.trim() || [
+        exp.category,
+        exp.crop,
+        exp.field_name,
+        exp.description,
+        exp.vendor_name,
+        exp.bill_number
+      ].some(val => (val || '').toLowerCase().includes(searchQuery.toLowerCase()));
+      return isScanned && matchCategory && matchCrop && matchMonth && matchSearch;
     });
   }, [expenses, filterCategory, filterCrop, filterMonth, searchQuery]);
 
   const filteredExpensesTotal = useMemo(() => {
     return filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   }, [filteredExpenses]);
+
+  const scannedExpensesTotal = useMemo(() => {
+    return scannedExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }, [scannedExpenses]);
 
   const filteredIncome = useMemo(() => {
     return incomeList.filter(inc => {
@@ -301,10 +332,30 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
           gap: '0.75rem',
           marginTop: '1rem'
         }}>
+          <button
+            onClick={() => setScanBillModalOpen(true)}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid rgba(34, 197, 94, 0.4)',
+              background: 'rgba(34, 197, 94, 0.12)',
+              color: 'var(--primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+              fontWeight: 800, fontSize: '0.9rem',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'all 180ms ease'
+            }}
+            id="btn-top-scan-bill"
+          >
+            <Camera size={18} />
+            📷 Scan Bill
+          </button>
+
           <button
             onClick={() => { setEditingDiary(null); setDiaryModalOpen(true); }}
             className="btn btn-primary"
@@ -493,6 +544,7 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
           { id: 'overview', label: '📊 Dashboard', count: null },
           { id: 'diary', label: '📒 Diary Entries', count: diaryEntries.length },
           { id: 'expenses', label: '💰 Expenses', count: expenses.length },
+          { id: 'scanned', label: '📄 Scanned Bills', count: scannedExpenses.length },
           { id: 'income', label: '💵 Income', count: incomeList.length },
           { id: 'analytics', label: '📈 Breakdown & Charts', count: null },
         ].map(tab => {
@@ -931,20 +983,347 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
                 </div>
               </div>
 
-              <button
-                onClick={() => { setEditingExpense(null); setExpenseModalOpen(true); }}
-                className="btn btn-primary btn-sm"
-              >
-                <Plus size={15} /> Add New Expense
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setScanBillModalOpen(true)}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800,
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                  id="btn-scan-bill-expenses-tab"
+                >
+                  <Camera size={15} />
+                  📷 Scan Bill
+                </button>
+                <button
+                  onClick={() => { setEditingExpense(null); setExpenseModalOpen(true); }}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}
+                  id="btn-add-expense-manual"
+                >
+                  <Plus size={14} /> + Add Expense Manually
+                </button>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
               <div style={{ position: 'relative' }}>
                 <Search size={15} style={{ position: 'absolute', left: 10, top: 11, color: 'var(--text-muted)' }} />
                 <input
                   type="text"
-                  placeholder="Search expenses…"
+                  placeholder="Search vendor, bill #, items…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="input"
+                  style={{ paddingLeft: '2rem', height: 38, fontSize: '0.825rem' }}
+                />
+              </div>
+
+              <div>
+                <select
+                  value={filterCategory}
+                  onChange={e => setFilterCategory(e.target.value)}
+                  className="input"
+                  style={{ height: 38, fontSize: '0.825rem' }}
+                >
+                  <option value="">All Categories</option>
+                  {EXPENSE_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <select
+                  value={filterSource}
+                  onChange={e => setFilterSource(e.target.value)}
+                  className="input"
+                  style={{ height: 38, fontSize: '0.825rem' }}
+                >
+                  <option value="">All Sources</option>
+                  <option value="SCANNED_RECEIPT">📷 Scanned Bills</option>
+                  <option value="MANUAL">✏️ Manual Expenses</option>
+                  <option value="TRACTOR_WORK">🚜 Tractor Work</option>
+                  <option value="LABOUR_WORK">👥 Labour Work</option>
+                </select>
+              </div>
+
+              <div>
+                <select
+                  value={filterCrop}
+                  onChange={e => setFilterCrop(e.target.value)}
+                  className="input"
+                  style={{ height: 38, fontSize: '0.825rem' }}
+                >
+                  <option value="">All Crops</option>
+                  {cropOptions.map(crop => (
+                    <option key={crop} value={crop}>{crop}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <input
+                  type="month"
+                  value={filterMonth}
+                  onChange={e => setFilterMonth(e.target.value)}
+                  className="input"
+                  style={{ height: 38, fontSize: '0.825rem' }}
+                  title="Filter by Month"
+                />
+              </div>
+
+              {(searchQuery || filterCategory || filterCrop || filterMonth || filterSource) && (
+                <button
+                  onClick={() => { setSearchQuery(''); setFilterCategory(''); setFilterCrop(''); setFilterMonth(''); setFilterSource(''); }}
+                  style={{
+                    padding: '0.45rem 0.75rem', borderRadius: 8,
+                    border: '1px solid var(--border)', background: 'var(--surface-secondary)',
+                    fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer'
+                  }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredExpenses.length === 0 ? (
+            <div className="card" style={{ padding: '3rem 1rem', textAlign: 'center', borderRadius: 'var(--radius-xl)', background: 'var(--surface)' }}>
+              <Receipt size={40} style={{ margin: '0 auto 0.5rem auto', color: 'var(--text-muted)' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>
+                No expenses found
+              </h3>
+              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                Scan a fertilizer or seeds bill with your phone camera, or enter an expense manually.
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setScanBillModalOpen(true)}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800 }}
+                >
+                  <Camera size={15} /> 📷 Scan Bill
+                </button>
+                <button
+                  onClick={() => { setEditingExpense(null); setExpenseModalOpen(true); }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <Plus size={15} /> + Add Manually
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+              {filteredExpenses.map(exp => {
+                const isScanned = (exp.receipt_source || '').toUpperCase() === 'SCANNED_RECEIPT';
+                const hasReceipt = Boolean(exp.receipt_url);
+                const itemCount = exp.extracted_details?.items?.length || 0;
+
+                return (
+                  <div
+                    key={exp.id}
+                    className="card"
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: 'var(--radius-xl)',
+                      background: 'var(--surface)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      border: isScanned ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid var(--border)'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                          📅 {exp.date}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {isScanned && (
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: 6,
+                              background: 'rgba(34, 197, 94, 0.15)', color: 'var(--primary)',
+                              display: 'inline-flex', alignItems: 'center', gap: 3
+                            }}>
+                              <Camera size={10} /> SCANNED
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)',
+                            background: 'var(--danger-bg)', color: 'var(--danger)'
+                          }}>
+                            {exp.category}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.35rem', lineHeight: 1.1 }}>
+                        {formatRs(exp.amount)}
+                      </div>
+
+                      {/* Vendor & Bill # badge if available */}
+                      {(exp.vendor_name || exp.bill_number) && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '0.45rem',
+                          background: 'var(--surface-secondary)', padding: '0.35rem 0.55rem',
+                          borderRadius: 6, marginBottom: '0.5rem', fontSize: '0.75rem', flexWrap: 'wrap'
+                        }}>
+                          {exp.vendor_name && (
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <Store size={12} style={{ color: 'var(--primary)' }} />
+                              {exp.vendor_name}
+                            </span>
+                          )}
+                          {exp.bill_number && (
+                            <span style={{ color: 'var(--text-muted)' }}>
+                              #{exp.bill_number}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        {exp.crop && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)'
+                          }}>
+                            <Sprout size={13} style={{ color: 'var(--primary)' }} />
+                            {exp.crop}
+                          </span>
+                        )}
+                        {exp.field_name && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)'
+                          }}>
+                            <MapPin size={12} />
+                            {exp.field_name}
+                          </span>
+                        )}
+                      </div>
+
+                      {exp.description && (
+                        <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 0.65rem 0' }}>
+                          {exp.description}
+                        </p>
+                      )}
+
+                      {/* Receipt View Button */}
+                      {hasReceipt && (
+                        <div style={{ marginBottom: '0.65rem' }}>
+                          <button
+                            onClick={() => setViewReceiptModal(exp)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                              padding: '0.35rem 0.65rem', borderRadius: 8,
+                              border: '1px solid rgba(34, 197, 94, 0.4)', background: 'rgba(34, 197, 94, 0.08)',
+                              fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', cursor: 'pointer'
+                            }}
+                          >
+                            <Receipt size={13} />
+                            <span>View Bill & Items {itemCount > 0 ? `(${itemCount})` : ''}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem',
+                      borderTop: '1px solid var(--border)', paddingTop: '0.65rem', marginTop: '0.5rem'
+                    }}>
+                      <button
+                        onClick={() => { setEditingExpense(exp); setExpenseModalOpen(true); }}
+                        title="Edit Expense"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          padding: '0.35rem 0.65rem', borderRadius: 6,
+                          border: '1px solid var(--border)', background: 'var(--surface)',
+                          color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer'
+                        }}
+                      >
+                        <Edit3 size={13} /> Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteDialog({ type: 'expense', id: exp.id, title: `${exp.category} (${formatRs(exp.amount)})` })}
+                        title="Delete Expense"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          padding: '0.35rem 0.65rem', borderRadius: 6,
+                          border: '1px solid rgba(220,38,38,0.2)', background: 'var(--danger-bg)',
+                          color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* DEDICATED SCANNED BILLS DASHBOARD TAB */}
+      {activeSubTab === 'scanned' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="card" style={{ padding: '1.25rem', borderRadius: 'var(--radius-xl)', background: 'var(--surface)' }}>
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+              gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: 'rgba(34, 197, 94, 0.15)', color: 'var(--primary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Camera size={18} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                    Scanned Farming Bills
+                  </h3>
+                </div>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  All invoices and store receipts scanned with Farmer AI ({scannedExpenses.length} bills • Total: {formatRs(scannedExpensesTotal)})
+                </p>
+              </div>
+
+              <button
+                onClick={() => setScanBillModalOpen(true)}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800,
+                  padding: '0.65rem 1.25rem', fontSize: '0.9rem'
+                }}
+                id="btn-scan-bill-scanned-tab"
+              >
+                <Camera size={18} />
+                📷 Scan New Bill
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <div style={{ position: 'relative' }}>
+                <Search size={15} style={{ position: 'absolute', left: 10, top: 11, color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search vendor, bill #…"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="input"
@@ -990,148 +1369,109 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
                   title="Filter by Month"
                 />
               </div>
+            </div>
 
-              {(searchQuery || filterCategory || filterCrop || filterMonth) && (
+            {scannedExpenses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                <FileText size={42} style={{ margin: '0 auto 0.5rem auto', opacity: 0.4 }} />
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>
+                  No scanned bills found
+                </h4>
+                <p style={{ fontSize: '0.85rem', maxWidth: 360, margin: '0 auto 1.25rem auto' }}>
+                  Take a photo of your fertilizer, pesticide, seed, or tractor receipt and Farmer AI will extract and organize it.
+                </p>
                 <button
-                  onClick={() => { setSearchQuery(''); setFilterCategory(''); setFilterCrop(''); setFilterMonth(''); }}
-                  style={{
-                    padding: '0.45rem 0.75rem', borderRadius: 8,
-                    border: '1px solid var(--border)', background: 'var(--surface-secondary)',
-                    fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer'
-                  }}
+                  onClick={() => setScanBillModalOpen(true)}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
-                  Clear Filters
+                  <Camera size={16} /> Scan Your First Bill
                 </button>
-              )}
-            </div>
-          </div>
-
-          {filteredExpenses.length === 0 ? (
-            <div className="card" style={{ padding: '3rem 1rem', textAlign: 'center', borderRadius: 'var(--radius-xl)', background: 'var(--surface)' }}>
-              <Receipt size={40} style={{ margin: '0 auto 0.5rem auto', color: 'var(--text-muted)' }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>
-                No expenses recorded
-              </h3>
-              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                Keep track of seeds, fertilizers, tractor rental, and labour charges.
-              </p>
-              <button
-                onClick={() => { setEditingExpense(null); setExpenseModalOpen(true); }}
-                className="btn btn-primary btn-sm"
-              >
-                <Plus size={15} /> Add First Expense
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1rem' }}>
-              {filteredExpenses.map(exp => (
-                <div
-                  key={exp.id}
-                  className="card"
-                  style={{
-                    padding: '1.25rem',
-                    borderRadius: 'var(--radius-xl)',
-                    background: 'var(--surface)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>
-                        {exp.date}
-                      </span>
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)',
-                        background: 'var(--danger-bg)', color: 'var(--danger)'
-                      }}>
-                        {exp.category}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.4rem', lineHeight: 1.1 }}>
-                      {formatRs(exp.amount)}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                      {exp.crop && (
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1rem' }}>
+                {scannedExpenses.map(exp => (
+                  <div
+                    key={exp.id}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'var(--surface-secondary)',
+                      padding: '1.1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                        <div>
+                          <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                            {exp.vendor_name || exp.category || 'Farming Vendor'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {exp.date} {exp.bill_number ? `• Bill #${exp.bill_number}` : ''}
+                          </div>
+                        </div>
                         <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                          fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)'
+                          fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: 6,
+                          background: 'rgba(34, 197, 94, 0.15)', color: 'var(--primary)', textTransform: 'uppercase'
                         }}>
-                          <Sprout size={13} style={{ color: 'var(--primary)' }} />
-                          {exp.crop}
+                          {exp.category}
                         </span>
-                      )}
-                      {exp.field_name && (
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                          fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)'
-                        }}>
-                          <MapPin size={12} />
-                          {exp.field_name}
-                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--danger)', margin: '0.35rem 0' }}>
+                        {formatRs(exp.amount)}
+                      </div>
+
+                      {exp.extracted_details?.items?.length > 0 && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                          <strong>Items: </strong>
+                          {exp.extracted_details.items.map(it => it.name).filter(Boolean).slice(0, 3).join(', ')}
+                          {exp.extracted_details.items.length > 3 ? ` (+${exp.extracted_details.items.length - 3} more)` : ''}
+                        </div>
                       )}
                     </div>
 
-                    {exp.description && (
-                      <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 0.65rem 0' }}>
-                        {exp.description}
-                      </p>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '0.65rem' }}>
+                      <button
+                        onClick={() => setViewReceiptModal(exp)}
+                        className="btn btn-primary btn-sm"
+                        style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <Eye size={13} /> View Receipt
+                      </button>
 
-                    {exp.receipt_url && (
-                      <div style={{ marginBottom: '0.65rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button
-                          onClick={() => setMediaPreview({ url: exp.receipt_url, title: `${exp.category} Receipt`, type: 'Receipt Bill' })}
+                          onClick={() => { setEditingExpense(exp); setExpenseModalOpen(true); }}
                           style={{
-                            display: 'flex', alignItems: 'center', gap: '0.4rem',
-                            padding: '0.35rem 0.65rem', borderRadius: 8,
-                            border: '1px solid var(--border)', background: 'var(--surface-secondary)',
-                            fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', cursor: 'pointer'
+                            padding: '0.3rem 0.6rem', borderRadius: 6,
+                            border: '1px solid var(--border)', background: 'var(--surface)',
+                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)'
                           }}
                         >
-                          <Receipt size={13} />
-                          <span>View Bill / Receipt</span>
+                          <Edit3 size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteDialog({ type: 'expense', id: exp.id, title: `${exp.vendor_name || exp.category} (${formatRs(exp.amount)})` })}
+                          style={{
+                            padding: '0.3rem 0.6rem', borderRadius: 6,
+                            border: '1px solid rgba(220,38,38,0.2)', background: 'var(--danger-bg)',
+                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', color: 'var(--danger)'
+                          }}
+                        >
+                          <Trash2 size={13} />
                         </button>
                       </div>
-                    )}
+                    </div>
                   </div>
-
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem',
-                    borderTop: '1px solid var(--border)', paddingTop: '0.65rem', marginTop: '0.5rem'
-                  }}>
-                    <button
-                      onClick={() => { setEditingExpense(exp); setExpenseModalOpen(true); }}
-                      title="Edit Expense"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                        padding: '0.35rem 0.65rem', borderRadius: 6,
-                        border: '1px solid var(--border)', background: 'var(--surface)',
-                        color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer'
-                      }}
-                    >
-                      <Edit3 size={13} /> Edit
-                    </button>
-                    <button
-                      onClick={() => setDeleteDialog({ type: 'expense', id: exp.id, title: `${exp.category} (${formatRs(exp.amount)})` })}
-                      title="Delete Expense"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '0.25rem',
-                        padding: '0.35rem 0.65rem', borderRadius: 6,
-                        border: '1px solid rgba(220,38,38,0.2)', background: 'var(--danger-bg)',
-                        color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer'
-                      }}
-                    >
-                      <Trash2 size={13} /> Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1535,6 +1875,31 @@ export default function FarmDiary({ user, initialTab = 'overview' }) {
         />
       )}
 
+      {scanBillModalOpen && (
+        <ScanBillModal
+          isOpen={scanBillModalOpen}
+          existingCrops={cropOptions}
+          onClose={() => setScanBillModalOpen(false)}
+          onBillSaved={(savedExpense) => {
+            setScanBillModalOpen(false);
+            showToast('success', `Bill ${savedExpense?.bill_number ? '#' + savedExpense.bill_number : ''} saved to expenses!`);
+            loadData();
+          }}
+        />
+      )}
+
+      {viewReceiptModal && (
+        <ViewReceiptModal
+          expense={viewReceiptModal}
+          onClose={() => setViewReceiptModal(null)}
+          onEdit={(exp) => {
+            setViewReceiptModal(null);
+            setEditingExpense(exp);
+            setExpenseModalOpen(true);
+          }}
+        />
+      )}
+
       {mediaPreview && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -1933,8 +2298,15 @@ function ExpenseModal({ expense, cropOptions, onClose, onSaved }) {
   const [crop, setCrop] = useState(expense?.crop || '');
   const [fieldName, setFieldName] = useState(expense?.field_name || '');
   const [description, setDescription] = useState(expense?.description || '');
+  const [vendorName, setVendorName] = useState(expense?.vendor_name || '');
+  const [billNumber, setBillNumber] = useState(expense?.bill_number || '');
+  const [vendorPhone, setVendorPhone] = useState(expense?.vendor_phone || '');
+  const [tax, setTax] = useState(expense?.tax !== undefined && expense?.tax !== null ? String(expense.tax) : '');
+  const [discount, setDiscount] = useState(expense?.discount !== undefined && expense?.discount !== null ? String(expense.discount) : '');
+  const [paymentMethod, setPaymentMethod] = useState(expense?.payment_method || 'Cash');
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(expense?.receipt_url || null);
+  const [showAdvanced, setShowAdvanced] = useState(Boolean(expense?.vendor_name || expense?.bill_number || expense?.tax));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -1980,6 +2352,13 @@ function ExpenseModal({ expense, cropOptions, onClose, onSaved }) {
       formData.append('crop', crop);
       formData.append('field_name', fieldName);
       formData.append('description', description);
+      formData.append('vendor_name', vendorName);
+      formData.append('bill_number', billNumber);
+      formData.append('vendor_phone', vendorPhone);
+      if (tax) formData.append('tax', tax);
+      if (discount) formData.append('discount', discount);
+      if (paymentMethod) formData.append('payment_method', paymentMethod);
+
       if (receiptFile) {
         formData.append('receipt', receiptFile);
       }
@@ -2004,7 +2383,7 @@ function ExpenseModal({ expense, cropOptions, onClose, onSaved }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
     }}>
       <div style={{
-        maxWidth: 520, width: '100%', background: 'var(--surface)',
+        maxWidth: 540, width: '100%', background: 'var(--surface)',
         borderRadius: 'var(--radius-xl)', overflow: 'hidden',
         boxShadow: 'var(--shadow-lg)', maxHeight: '90vh', display: 'flex', flexDirection: 'column'
       }}>
@@ -2132,6 +2511,111 @@ function ExpenseModal({ expense, cropOptions, onClose, onSaved }) {
               className="input"
               style={{ height: 40 }}
             />
+          </div>
+
+          {/* Optional Bill / Vendor Info Toggle */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{
+                background: 'none', border: 'none', padding: 0,
+                color: 'var(--primary)', fontSize: '0.78rem', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
+              }}
+            >
+              <span>{showAdvanced ? '− Hide Vendor & Bill Details' : '+ Add Vendor & Bill Details (Optional)'}</span>
+            </button>
+
+            {showAdvanced && (
+              <div style={{
+                marginTop: '0.6rem', padding: '0.85rem',
+                borderRadius: 10, background: 'var(--surface-secondary)',
+                border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.65rem'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                      Vendor / Shop Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Kisan Agro Center"
+                      value={vendorName}
+                      onChange={e => setVendorName(e.target.value)}
+                      className="input"
+                      style={{ height: 36, fontSize: '0.82rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                      Bill / Invoice #
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. INV-2026-081"
+                      value={billNumber}
+                      onChange={e => setBillNumber(e.target.value)}
+                      className="input"
+                      style={{ height: 36, fontSize: '0.82rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                      Tax (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0.00"
+                      value={tax}
+                      onChange={e => setTax(e.target.value)}
+                      className="input"
+                      style={{ height: 36, fontSize: '0.82rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                      Discount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0.00"
+                      value={discount}
+                      onChange={e => setDiscount(e.target.value)}
+                      className="input"
+                      style={{ height: 36, fontSize: '0.82rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                      Payment Mode
+                    </label>
+                    <select
+                      value={paymentMethod}
+                      onChange={e => setPaymentMethod(e.target.value)}
+                      className="input"
+                      style={{ height: 36, fontSize: '0.82rem' }}
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI / GPay / PhonePe</option>
+                      <option value="Credit / Khata">Credit / Khata</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Card">Card</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -2509,6 +2993,272 @@ function IncomeModal({ income, cropOptions, onClose, onSaved }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function ViewReceiptModal({ expense, onClose, onEdit }) {
+  if (!expense) return null;
+
+  let parsedRaw = expense.extracted_details;
+  if (!parsedRaw && expense.raw_extracted_json) {
+    try {
+      parsedRaw = typeof expense.raw_extracted_json === 'string'
+        ? JSON.parse(expense.raw_extracted_json)
+        : expense.raw_extracted_json;
+    } catch {
+      parsedRaw = null;
+    }
+  }
+
+  const items = parsedRaw?.items || [];
+  const isAiScanned = expense.receipt_source === 'AI_SCAN' || expense.receipt_source === 'SCANNED';
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+    }}>
+      <div style={{
+        maxWidth: 720, width: '100%', background: 'var(--surface)',
+        borderRadius: 'var(--radius-xl)', overflow: 'hidden',
+        boxShadow: 'var(--shadow-xl)', maxHeight: '92vh', display: 'flex', flexDirection: 'column'
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)',
+          background: 'var(--surface)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 34, borderRadius: 8,
+              background: 'rgba(34, 197, 94, 0.12)', color: 'var(--primary)'
+            }}>
+              <Receipt size={18} />
+            </span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                {expense.bill_number ? `Bill #${expense.bill_number}` : 'Receipt & Expense Details'}
+              </h3>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {expense.date} • {expense.category}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+          {/* Top Amount Banner */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem',
+            padding: '1rem 1.25rem', borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+            border: '1px solid rgba(34, 197, 94, 0.25)'
+          }}>
+            <div>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
+                Total Amount
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', lineHeight: 1.1 }}>
+                {formatRs(expense.amount)}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '0.3rem 0.65rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 800,
+                background: isAiScanned ? 'rgba(34, 197, 94, 0.15)' : 'var(--surface-secondary)',
+                color: isAiScanned ? 'var(--primary)' : 'var(--text-secondary)',
+                border: isAiScanned ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border)'
+              }}>
+                {isAiScanned ? '✨ AI Scanned' : '📝 Manual'}
+              </span>
+              <span style={{
+                padding: '0.3rem 0.65rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
+                background: 'var(--surface-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)'
+              }}>
+                {expense.category}
+              </span>
+              {expense.crop && (
+                <span style={{
+                  padding: '0.3rem 0.65rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
+                  background: 'var(--surface-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)'
+                }}>
+                  🌱 {expense.crop}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Grid: Image & Vendor Metadata */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: expense.receipt_url ? 'repeat(auto-fit, minmax(260px, 1fr))' : '1fr',
+            gap: '1rem'
+          }}>
+            {/* Receipt Image */}
+            {expense.receipt_url && (
+              <div style={{
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+                overflow: 'hidden', background: '#0f172a', display: 'flex', flexDirection: 'column'
+              }}>
+                <div style={{ maxHeight: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '0.5rem' }}>
+                  <img
+                    src={expense.receipt_url}
+                    alt="Receipt"
+                    style={{ maxWidth: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 6 }}
+                  />
+                </div>
+                <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-secondary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Attached Receipt</span>
+                  <a
+                    href={expense.receipt_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}
+                  >
+                    <ExternalLink size={12} /> Open Full View
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Vendor & Bill Details */}
+            <div style={{
+              background: 'var(--surface-secondary)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem'
+            }}>
+              <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Vendor & Transaction Info
+              </h4>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Vendor / Shop</span>
+                  <strong style={{ color: 'var(--text-primary)' }}>{expense.vendor_name || 'Not recorded'}</strong>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Bill / Invoice #</span>
+                  <strong style={{ color: 'var(--text-primary)' }}>{expense.bill_number || 'N/A'}</strong>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Phone</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{expense.vendor_phone || 'N/A'}</span>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Payment Method</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{expense.payment_method || 'Cash'}</span>
+                </div>
+
+                {expense.vendor_address && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Vendor Address</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{expense.vendor_address}</span>
+                  </div>
+                )}
+
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Tax / GST</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{expense.tax ? formatRs(expense.tax) : '₹0'}</span>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Discount</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{expense.discount ? formatRs(expense.discount) : '₹0'}</span>
+                </div>
+
+                {expense.field_name && (
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Field / Plot</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{expense.field_name}</span>
+                  </div>
+                )}
+
+                {expense.scanned_at && (
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Scanned At</span>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{expense.scanned_at.split('T')[0]}</span>
+                  </div>
+                )}
+              </div>
+
+              {expense.description && (
+                <div style={{ marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Notes</span>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{expense.description}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Itemized Table if available */}
+          {items && items.length > 0 && (
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)', overflow: 'hidden'
+            }}>
+              <div style={{ padding: '0.65rem 0.9rem', background: 'var(--surface-secondary)', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  📋 Extracted Line Items ({items.length})
+                </span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-secondary)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Item</th>
+                      <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Qty</th>
+                      <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Unit Price</th>
+                      <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'right' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((it, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>{it.name}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-secondary)' }}>{it.quantity} {it.unit}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-secondary)' }}>{it.unit_price ? `₹${it.unit_price}` : '—'}</td>
+                        <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right' }}>₹{it.total_price || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{
+          padding: '0.85rem 1.5rem', borderTop: '1px solid var(--border)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)'
+        }}>
+          <button
+            onClick={() => onEdit(expense)}
+            className="btn btn-secondary"
+            style={{ fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <Edit2 size={14} /> Edit Expense Record
+          </button>
+          <button
+            onClick={onClose}
+            className="btn btn-primary"
+            style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
