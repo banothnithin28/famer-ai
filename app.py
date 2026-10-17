@@ -4100,6 +4100,27 @@ def generate_tractor_job_id(conn, work_date):
     return f"{prefix}{next_seq:03d}"
 
 
+def find_tractor_job(conn, identifier):
+    identifier = str(identifier or '').strip()
+    if not identifier:
+        return None
+
+    if identifier.isdigit():
+        row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (int(identifier),)).fetchone()
+        if row:
+            return row
+
+    if re.fullmatch(r'TR-\d{8}-\d{3,}', identifier, re.IGNORECASE):
+        row = conn.execute(
+            "SELECT * FROM tractor_jobs WHERE job_id = ?",
+            (identifier.upper(),)
+        ).fetchone()
+        if row:
+            return row
+
+    return conn.execute("SELECT * FROM tractor_jobs WHERE join_token = ?", (identifier,)).fetchone()
+
+
 def parse_iso_ts(ts_str):
     if not ts_str:
         return None
@@ -4364,34 +4385,39 @@ def api_create_tractor_job():
             return jsonify({'success': False, 'error': 'Field size must be a valid number.'}), 400
 
     conn = get_db()
-    job_id = generate_tractor_job_id(conn, work_date)
-    join_token = secrets.token_urlsafe(16)
-    server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        job_id = generate_tractor_job_id(conn, work_date)
+        join_token = secrets.token_urlsafe(16)
+        server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO tractor_jobs (
-            job_id, join_token, farmer_id, driver_name, driver_phone, tractor_number,
-            crop, field_name, work_type, work_date, field_size, rate, rate_unit,
-            status, total_working_seconds, calculated_amount, final_amount, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREATED', 0, 0.0, 0.0, ?)
-    """, (
-        job_id, join_token, user['id'], driver_name, driver_phone, tractor_number,
-        crop, field_name, work_type, work_date, field_size, rate, rate_unit, notes
-    ))
-    job_pk = cursor.lastrowid
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO tractor_jobs (
+                job_id, join_token, farmer_id, driver_name, driver_phone, tractor_number,
+                crop, field_name, work_type, work_date, field_size, rate, rate_unit,
+                status, total_working_seconds, calculated_amount, final_amount, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREATED', 0, 0.0, 0.0, ?)
+        """, (
+            job_id, join_token, user['id'], driver_name, driver_phone, tractor_number,
+            crop, field_name, work_type, work_date, field_size, rate, rate_unit, notes
+        ))
+        job_pk = cursor.lastrowid
 
-    # Record CREATED audit event
-    cursor.execute("""
-        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
-        VALUES (?, 'CREATED', ?, ?, ?)
-    """, (job_pk, user['id'], server_now, f"Job created by farmer {user['name']} with rate ₹{rate}/{rate_unit}"))
+        cursor.execute("""
+            INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+            VALUES (?, 'CREATED', ?, ?, ?)
+        """, (job_pk, user['id'], server_now, f"Job created by farmer {user['name']} with rate ₹{rate}/{rate_unit}"))
 
-    conn.commit()
-
-    created_row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_pk,)).fetchone()
-    serialized = serialize_tractor_job(created_row, user_id=user['id'], conn=conn)
-    conn.close()
+        conn.commit()
+        created_row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_pk,)).fetchone()
+        serialized = serialize_tractor_job(created_row, user_id=user['id'], conn=conn)
+    except sqlite3.Error:
+        conn.rollback()
+        app.logger.exception('Failed to persist tractor job')
+        return jsonify({'success': False, 'error': 'Unable to save the tractor job. Please try again.'}), 500
+    finally:
+        conn.close()
 
     return jsonify({
         'success': True,
@@ -4407,13 +4433,12 @@ def api_get_tractor_job_detail(identifier):
         return jsonify({'success': False, 'error': 'Please sign in to view tractor job details.'}), 401
 
     conn = get_db()
-    row = None
-    if identifier.isdigit():
-        row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (int(identifier),)).fetchone()
-    if not row:
-        row = conn.execute("SELECT * FROM tractor_jobs WHERE job_id = ?", (identifier.upper(),)).fetchone()
-    if not row:
-        row = conn.execute("SELECT * FROM tractor_jobs WHERE join_token = ?", (identifier,)).fetchone()
+    try:
+        row = find_tractor_job(conn, identifier)
+    except sqlite3.Error:
+        app.logger.exception('Failed to look up tractor job')
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unable to look up the tractor job. Please try again.'}), 500
 
     if not row:
         conn.close()
@@ -4428,9 +4453,15 @@ def api_get_tractor_job_detail(identifier):
     conn.close()
 
     if not is_owner and not is_driver:
-        if row['status'] == 'CREATED':
-            serialized['is_preview_for_join'] = True
-            return jsonify({'success': True, 'job': serialized})
+        if row['status'] == 'CREATED' and row['driver_id'] is None:
+            preview_fields = (
+                'id', 'job_id', 'status', 'driver_name', 'crop',
+                'field_name', 'work_type', 'work_date', 'field_size', 'rate',
+                'rate_unit', 'farmer_name', 'created_at', 'updated_at'
+            )
+            preview = {key: serialized[key] for key in preview_fields if key in serialized}
+            preview['is_preview_for_join'] = True
+            return jsonify({'success': True, 'job': preview})
         return jsonify({'success': False, 'error': 'You are not authorized to view this tractor job.'}), 403
 
     return jsonify({'success': True, 'job': serialized})
@@ -4443,42 +4474,58 @@ def api_join_tractor_job(identifier):
         return jsonify({'success': False, 'error': 'Please sign in as tractor driver to join this job.'}), 401
 
     conn = get_db()
-    row = None
-    if identifier.isdigit():
-        row = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (int(identifier),)).fetchone()
-    if not row:
-        row = conn.execute("SELECT * FROM tractor_jobs WHERE job_id = ?", (identifier.upper(),)).fetchone()
-    if not row:
-        row = conn.execute("SELECT * FROM tractor_jobs WHERE join_token = ?", (identifier,)).fetchone()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        row = find_tractor_job(conn, identifier)
+    except sqlite3.Error:
+        conn.rollback()
+        app.logger.exception('Failed to look up tractor job for acceptance')
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unable to accept the tractor job. Please try again.'}), 500
 
     if not row:
         conn.close()
         return jsonify({'success': False, 'error': 'Tractor job not found.'}), 404
 
-    if row['status'] not in ('CREATED', 'DRIVER_JOINED'):
+    if row['status'] != 'CREATED':
+        conn.rollback()
         conn.close()
         return jsonify({'success': False, 'error': f"Cannot join job in '{row['status']}' status."}), 400
+
+    if row['driver_id'] is not None:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'error': 'This tractor job has already been accepted.'}), 409
 
     job_pk = row['id']
     server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     driver_name = user['name']
 
-    conn.execute("""
+    cursor = conn.execute("""
         UPDATE tractor_jobs 
         SET driver_id = ?, driver_name = ?, status = 'DRIVER_JOINED', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? AND status = 'CREATED' AND driver_id IS NULL
     """, (user['id'], driver_name, job_pk))
 
-    conn.execute("""
-        INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
-        VALUES (?, 'DRIVER_JOINED', ?, ?, ?)
-    """, (job_pk, user['id'], server_now, f"Driver {driver_name} joined job {row['job_id']}"))
+    if cursor.rowcount != 1:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'error': 'This tractor job is no longer available.'}), 409
 
-    conn.commit()
-
-    updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_pk,)).fetchone()
-    serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
-    conn.close()
+    try:
+        conn.execute("""
+            INSERT INTO tractor_work_events (tractor_job_id, event_type, performed_by, server_timestamp, notes)
+            VALUES (?, 'DRIVER_JOINED', ?, ?, ?)
+        """, (job_pk, user['id'], server_now, f"Driver {driver_name} joined job {row['job_id']}"))
+        conn.commit()
+        updated = conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (job_pk,)).fetchone()
+        serialized = serialize_tractor_job(updated, user_id=user['id'], conn=conn)
+    except sqlite3.Error:
+        conn.rollback()
+        app.logger.exception('Failed to persist tractor job acceptance')
+        return jsonify({'success': False, 'error': 'Unable to accept the tractor job. Please try again.'}), 500
+    finally:
+        conn.close()
 
     return jsonify({
         'success': True,

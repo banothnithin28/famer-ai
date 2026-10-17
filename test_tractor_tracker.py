@@ -9,6 +9,7 @@ import os
 import time
 import datetime
 import json
+from concurrent.futures import ThreadPoolExecutor
 from app import app, get_db
 
 def run_tests():
@@ -71,22 +72,79 @@ def run_tests():
     # TEST 2: Driver joins job using Job ID / Join Token
     # =========================================================================
     print("\n[Test 2] Testing Driver Joining via Job ID...")
-    login_driver = client.post('/api/auth/login', json={"email": driver_email, "password": password})
+    phone_b_client = app.test_client()
+    login_driver = phone_b_client.post('/api/auth/login', json={"email": driver_email, "password": password})
     assert login_driver.status_code == 200
 
-    # First test lookup preview
-    preview_res = client.get(f'/api/tractor/jobs/{job_code}')
+    # Separate browser session finds the row after its creating request closed its DB connection.
+    preview_res = phone_b_client.get(f'/api/tractor/jobs/%20{job_code.lower()}%20')
     assert preview_res.status_code == 200
-    assert preview_res.get_json()['job']['crop'] == "Cotton"
+    preview = preview_res.get_json()['job']
+    assert preview['crop'] == "Cotton"
+    assert preview['job_id'] == job_code
+    assert preview['status'] == 'CREATED'
+    assert preview.get('is_preview_for_join') is True
+    assert 'notes' not in preview and 'farmer_email' not in preview and 'join_token' not in preview
+    invalid_lookup = phone_b_client.get('/api/tractor/jobs/not-a-valid-job-id')
+    assert invalid_lookup.status_code == 404
 
     # Join job
-    join_res = client.post(f'/api/tractor/jobs/{job_code}/join')
+    join_res = phone_b_client.post(f'/api/tractor/jobs/{job_code}/join')
     assert join_res.status_code == 200, f"Join failed: {join_res.get_json()}"
     joined_job = join_res.get_json()['job']
     assert joined_job['status'] == 'DRIVER_JOINED'
     assert joined_job['driver_id'] == driver_id
     assert joined_job['driver_name'] == "Ramesh Driver"
+    assert joined_job['farmer_id'] == farmer_id
+    assert joined_job['updated_at']
+    duplicate_join = phone_b_client.post(f'/api/tractor/jobs/{job_code}/join')
+    assert duplicate_join.status_code == 400
+
+    farmer_device_client = app.test_client()
+    farmer_device_client.post('/api/auth/login', json={"email": farmer_email, "password": password})
+    farmer_view_after_join = farmer_device_client.get(f'/api/tractor/jobs/{job_code}')
+    assert farmer_view_after_join.status_code == 200
+    assert farmer_view_after_join.get_json()['job']['status'] == 'DRIVER_JOINED'
+    assert farmer_view_after_join.get_json()['job']['driver_id'] == driver_id
     print(f"  -> Passed: Driver joined job {job_code}, status became DRIVER_JOINED")
+
+    # Two separate driver sessions race to accept a second open job.
+    race_job_res = farmer_device_client.post('/api/tractor/jobs', json={
+        "work_date": "2026-09-27",
+        "field_name": "North Plot",
+        "crop": "Cotton",
+        "work_type": "Cultivating",
+        "rate": 700.0,
+        "rate_unit": "per_hour",
+        "field_size": 1.5
+    })
+    assert race_job_res.status_code == 201
+    race_job = race_job_res.get_json()['job']
+    race_clients = [app.test_client(), app.test_client()]
+    race_emails = [driver_email, unauthorized_email]
+    for race_client, race_email in zip(race_clients, race_emails):
+        login_res = race_client.post('/api/auth/login', json={"email": race_email, "password": password})
+        assert login_res.status_code == 200
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        race_responses = list(executor.map(
+            lambda race_client: race_client.post(f"/api/tractor/jobs/{race_job['job_id']}/join"),
+            race_clients
+        ))
+    race_statuses = sorted(response.status_code for response in race_responses)
+    assert race_statuses == [200, 400], f"Expected one acceptance and one rejection, got {race_statuses}"
+    race_conn = get_db()
+    race_row = race_conn.execute("SELECT * FROM tractor_jobs WHERE id = ?", (race_job['id'],)).fetchone()
+    race_join_events = race_conn.execute(
+        "SELECT COUNT(*) AS c FROM tractor_work_events WHERE tractor_job_id = ? AND event_type = 'DRIVER_JOINED'",
+        (race_job['id'],)
+    ).fetchone()['c']
+    race_conn.close()
+    winning_response = next(response for response in race_responses if response.status_code == 200)
+    assert race_row['status'] == 'DRIVER_JOINED'
+    assert race_row['driver_id'] == winning_response.get_json()['job']['driver_id']
+    assert race_join_events == 1
+    print("  -> Passed: Simultaneous acceptance committed exactly one driver and one audit event")
 
     # =========================================================================
     # TEST 3: Farmer requests Start Work
@@ -252,6 +310,8 @@ def run_tests():
     dj = driver_view.get_json()['job']
     assert dj['status'] == 'COMPLETED'
     assert dj['final_amount'] == 2866.67
+    closed_join = client.post(f'/api/tractor/jobs/{job_code}/join')
+    assert closed_join.status_code == 400
     print("  -> Passed: Both Farmer and Driver access identical, verified digital receipt")
 
     # =========================================================================
