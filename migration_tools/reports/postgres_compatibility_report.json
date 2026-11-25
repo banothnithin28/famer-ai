@@ -1,0 +1,6340 @@
+{
+  "aggregate_data_checks": {
+    "data_records_exported": false,
+    "dependency_cycle_tables": [],
+    "duplicate_primary_key_groups": 0,
+    "duplicate_unique_index_groups": 0,
+    "empty_tables": [
+      "alerts",
+      "decision_scores",
+      "irrigation_logs"
+    ],
+    "important_column_nulls": 0,
+    "migration_order": [
+      "users",
+      "crop_recommendations",
+      "decision_scores",
+      "farm_diary_entries",
+      "farm_expenses",
+      "farm_income",
+      "farmer_profiles",
+      "irrigation_logs",
+      "labour_jobs",
+      "labour_agreements",
+      "labour_disputes",
+      "labour_work_events",
+      "labour_work_sessions",
+      "labour_breaks",
+      "labour_workers",
+      "labour_advances",
+      "labour_attendance",
+      "labour_payments",
+      "password_reset_otps",
+      "plants",
+      "alerts",
+      "disease_scans",
+      "tractor_jobs",
+      "tractor_disputes",
+      "tractor_work_events",
+      "user_sessions"
+    ],
+    "tables_with_data": [
+      "crop_recommendations",
+      "disease_scans",
+      "farm_diary_entries",
+      "farm_expenses",
+      "farm_income",
+      "farmer_profiles",
+      "labour_advances",
+      "labour_agreements",
+      "labour_attendance",
+      "labour_breaks",
+      "labour_disputes",
+      "labour_jobs",
+      "labour_payments",
+      "labour_work_events",
+      "labour_work_sessions",
+      "labour_workers",
+      "password_reset_otps",
+      "plants",
+      "tractor_disputes",
+      "tractor_jobs",
+      "tractor_work_events",
+      "user_sessions",
+      "users"
+    ],
+    "tables_with_relationships": [
+      "alerts",
+      "crop_recommendations",
+      "decision_scores",
+      "disease_scans",
+      "farm_diary_entries",
+      "farm_expenses",
+      "farm_income",
+      "farmer_profiles",
+      "irrigation_logs",
+      "labour_advances",
+      "labour_agreements",
+      "labour_attendance",
+      "labour_breaks",
+      "labour_disputes",
+      "labour_jobs",
+      "labour_payments",
+      "labour_work_events",
+      "labour_work_sessions",
+      "labour_workers",
+      "password_reset_otps",
+      "plants",
+      "tractor_disputes",
+      "tractor_jobs",
+      "tractor_work_events",
+      "user_sessions",
+      "users"
+    ]
+  },
+  "data_migration_readiness": {
+    "data_records_exported": false,
+    "total_rows": 1347,
+    "tables_with_data": [
+      "crop_recommendations",
+      "disease_scans",
+      "farm_diary_entries",
+      "farm_expenses",
+      "farm_income",
+      "farmer_profiles",
+      "labour_advances",
+      "labour_agreements",
+      "labour_attendance",
+      "labour_breaks",
+      "labour_disputes",
+      "labour_jobs",
+      "labour_payments",
+      "labour_work_events",
+      "labour_work_sessions",
+      "labour_workers",
+      "password_reset_otps",
+      "plants",
+      "tractor_disputes",
+      "tractor_jobs",
+      "tractor_work_events",
+      "user_sessions",
+      "users"
+    ],
+    "empty_tables": [
+      "alerts",
+      "decision_scores",
+      "irrigation_logs"
+    ],
+    "tables_requiring_special_handling": {
+      "authentication_sensitive": [
+        "users",
+        "password_reset_otps",
+        "user_sessions"
+      ],
+      "json_stored_as_text": [
+        "disease_scans",
+        "farm_expenses"
+      ],
+      "text_date_time_columns": [
+        "farm_diary_entries",
+        "farm_expenses",
+        "farm_income",
+        "labour_advances",
+        "labour_attendance",
+        "labour_breaks",
+        "labour_jobs",
+        "labour_payments",
+        "labour_work_events",
+        "labour_work_sessions",
+        "tractor_jobs",
+        "tractor_work_events"
+      ],
+      "real_numeric_columns": [
+        "farm_expenses",
+        "farm_income",
+        "farmer_profiles",
+        "labour_advances",
+        "labour_attendance",
+        "labour_jobs",
+        "labour_payments",
+        "labour_workers",
+        "tractor_jobs"
+      ],
+      "nullable_set_null_foreign_keys": [
+        {
+          "table": "alerts",
+          "columns": ["plant_id"]
+        },
+        {
+          "table": "disease_scans",
+          "columns": ["plant_id"]
+        },
+        {
+          "table": "labour_advances",
+          "columns": ["worker_id"]
+        },
+        {
+          "table": "labour_agreements",
+          "columns": ["worker_id"]
+        },
+        {
+          "table": "labour_jobs",
+          "columns": ["expense_id", "worker_id"]
+        },
+        {
+          "table": "labour_payments",
+          "columns": ["worker_id"]
+        },
+        {
+          "table": "labour_workers",
+          "columns": ["user_id"]
+        },
+        {
+          "table": "tractor_jobs",
+          "columns": ["expense_id", "driver_id"]
+        }
+      ]
+    },
+    "duplicate_primary_key_groups": 0,
+    "duplicate_unique_index_groups": 0,
+    "foreign_key_violation_rows": 0,
+    "orphan_reference_count": 0,
+    "important_column_nulls": 0,
+    "id_conflict_risk": "No duplicate primary-key groups were found. Preserve source IDs; synchronize generated PostgreSQL identities. The guarded importer refuses a non-empty target. farmer_profiles.user_id is a non-generated foreign-key primary key, not an identity.",
+    "missing_record_risk": "Cannot be ruled out from aggregate-only checks. No row contents were inspected or exported. Reconcile the historical 1,291-row note against the current 1,347-row count before any approved export.",
+    "readiness": "READY WITH WARNINGS"
+  },
+  "compatibility_status": "MATCHED_WITH_TYPE_MAPPINGS_REQUIRING_REVIEW",
+  "extra_postgres_tables_not_in_models": [],
+  "extra_sqlite_tables_not_in_models": [],
+  "migration_files": [
+    "database/migrations/staging/001_initial_schema.sql"
+  ],
+  "missing_postgres_tables": [],
+  "missing_tables_in_sqlite": [],
+  "postgres_connections_attempted": false,
+  "postgres_migration_table_count": 26,
+  "readiness": "READY WITH WARNINGS",
+  "risks": [
+    {
+      "detail": "A prior inventory recorded 1,291 rows; reconcile that figure with this current inventory before exporting.",
+      "severity": "MEDIUM",
+      "title": "Historical count reconciliation"
+    },
+    {
+      "detail": "Text dates and timestamps require format, timezone, precision, and ordering checks in a disposable PostgreSQL fixture.",
+      "severity": "MEDIUM",
+      "title": "Date/time representation"
+    },
+    {
+      "detail": "JSON fields remain text and boolean-like values remain integers in the existing model; validate semantics before changing types.",
+      "severity": "MEDIUM",
+      "title": "JSON and boolean conventions"
+    },
+    {
+      "detail": "The source contains authentication and personal/farm records; protect any separately approved future backup/export.",
+      "severity": "MEDIUM",
+      "title": "Sensitive records"
+    },
+    {
+      "detail": "Preserve IDs and synchronize PostgreSQL identity sequences during any future approved import.",
+      "severity": "LOW",
+      "title": "Identity sequence synchronization"
+    },
+    {
+      "detail": "Parameterized qmark SQL, lastrowid, IntegrityError, PRAGMA, strftime, datetime(), and ALTER TABLE need deliberate PostgreSQL adaptation.",
+      "severity": "LOW",
+      "title": "SQLite-specific application SQL"
+    }
+  ],
+  "schema_mismatch_tables": [],
+  "sqlalchemy_model_table_count": 26,
+  "sqlite_specific_backend_usage": {
+    "PRAGMA": "present in database/init_db.py for schema inspection",
+    "cursor.lastrowid": "present in app.py and database/init_db.py",
+    "datetime_sql": "present in app.py chronological-order queries",
+    "qmark_placeholders": "present throughout direct SQLite SQL",
+    "schema_modifications": "conditional ALTER TABLE statements in database/init_db.py",
+    "sqlite3.IntegrityError": "present in app.py",
+    "sqlite3.connect": "present in app.py and farm_context_service.py",
+    "sqlite_master": "not found in reviewed backend files; read-only migration inspection uses it for metadata",
+    "strftime_sql": "present in app.py elapsed-time query"
+  },
+  "sqlite_table_count": 26,
+  "tables": {
+    "alerts": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "alerts"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "alerts"
+        },
+        {
+          "column": "plant_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "alerts"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "alerts"
+        },
+        {
+          "column": "message",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "alerts"
+        },
+        {
+          "column": "read",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "alerts"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "alerts"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "crop_recommendations": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "soil_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "season",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "water_availability",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "previous_crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "location",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "recommended_crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "confidence",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "reason",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "crop_recommendations"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "crop_recommendations"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "decision_scores": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "crop_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "decision_scores"
+        },
+        {
+          "column": "overall_score",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "soil_score",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "weather_score",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "water_score",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "crop_score",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "decision_scores"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "decision_scores"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "disease_scans": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "disease_scans"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "disease_scans"
+        },
+        {
+          "column": "plant_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "disease_scans"
+        },
+        {
+          "column": "image_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "disease_scans"
+        },
+        {
+          "column": "disease_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "disease_scans"
+        },
+        {
+          "column": "confidence",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "disease_scans"
+        },
+        {
+          "column": "severity",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "disease_scans"
+        },
+        {
+          "column": "symptoms",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "disease_scans"
+        },
+        {
+          "column": "suggestions_json",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "disease_scans"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "disease_scans"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "farm_diary_entries": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "field_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "activity_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "description",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "photo_path",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_diary_entries"
+        },
+        {
+          "column": "updated_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_diary_entries"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "activity_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "activity_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "activity_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "farm_expenses": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "category",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "field_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "description",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "receipt_path",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "updated_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "bill_number",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "vendor_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "vendor_phone",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "vendor_address",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "receipt_source",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "raw_extracted_json",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "tax",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "discount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "payment_method",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_expenses"
+        },
+        {
+          "column": "scanned_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_expenses"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "bill_number"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "category"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "receipt_source"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "bill_number"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "category"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "receipt_source"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "bill_number"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "category"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "receipt_source"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "farm_income": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farm_income"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farm_income"
+        },
+        {
+          "column": "date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_income"
+        },
+        {
+          "column": "crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_income"
+        },
+        {
+          "column": "quantity",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farm_income"
+        },
+        {
+          "column": "unit",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_income"
+        },
+        {
+          "column": "selling_price",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farm_income"
+        },
+        {
+          "column": "total_amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farm_income"
+        },
+        {
+          "column": "buyer_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_income"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farm_income"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_income"
+        },
+        {
+          "column": "updated_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "farm_income"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "user_id",
+              "crop"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "date"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "farmer_profiles": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "farmer_profiles"
+        },
+        {
+          "column": "farm_size_acres",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "farmer_profiles"
+        },
+        {
+          "column": "soil_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farmer_profiles"
+        },
+        {
+          "column": "primary_crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "farmer_profiles"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "user_id"
+        ],
+        "sqlalchemy": [
+          "user_id"
+        ],
+        "sqlite": [
+          "user_id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "irrigation_logs": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "crop_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "moisture_pct",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "weather_condition",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "water_req",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "suggestion",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "irrigation_logs"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "irrigation_logs"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_advances": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_advances"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_advances"
+        },
+        {
+          "column": "worker_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_advances"
+        },
+        {
+          "column": "worker_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_advances"
+        },
+        {
+          "column": "farmer_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_advances"
+        },
+        {
+          "column": "amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_advances"
+        },
+        {
+          "column": "advance_date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_advances"
+        },
+        {
+          "column": "payment_method",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_advances"
+        },
+        {
+          "column": "reference_no",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_advances"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_advances"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_advances"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 3,
+        "migration_matches_model": true,
+        "model_count": 3,
+        "sqlite_count": 3,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "farmer_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "farmer_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "farmer_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_agreements": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "farmer_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "worker_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "terms_summary",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "farmer_agreed_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "worker_agreed_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_agreements"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_agreements"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 3,
+        "migration_matches_model": true,
+        "model_count": 3,
+        "sqlite_count": 3,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_attendance": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "worker_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "worker_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "day_fraction",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "hours_worked",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "rate_applied",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "wage_amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "created_by",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_attendance"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_attendance"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 3,
+        "migration_matches_model": true,
+        "model_count": 3,
+        "sqlite_count": 3,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id",
+              "worker_name",
+              "date"
+            ],
+            "unique": true
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id",
+              "worker_name",
+              "date"
+            ],
+            "unique": true
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id",
+              "worker_name",
+              "date"
+            ],
+            "unique": true
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_breaks": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "session_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "start_time",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "end_time",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "duration_seconds",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "reason",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_breaks"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_breaks"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_disputes": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "raised_by",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "reason",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "description",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "evidence_text",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "resolution",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_disputes"
+        },
+        {
+          "column": "resolved_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_disputes"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "labour_job_id",
+              "status"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "labour_job_id",
+              "status"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "labour_job_id",
+              "status"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_jobs": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "job_id",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "join_token",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "farmer_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "worker_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "worker_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "worker_phone",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "work_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "field_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "work_date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "expected_start_date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "expected_end_date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "payment_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "rate",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "num_workers",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "farmer_agreed",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "worker_agreed",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "farmer_confirmed",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "worker_confirmed",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "total_working_seconds",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "total_days_worked",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "total_earned",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "total_paid",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "total_advance",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "pending_amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "expense_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_jobs"
+        },
+        {
+          "column": "updated_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_jobs"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 3,
+        "migration_matches_model": true,
+        "model_count": 3,
+        "sqlite_count": 3,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "farmer_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "work_date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "worker_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": true
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": true
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "farmer_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "work_date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "worker_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": true
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": true
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "farmer_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "work_date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "worker_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": true
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": true
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_payments": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_payments"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_payments"
+        },
+        {
+          "column": "worker_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_payments"
+        },
+        {
+          "column": "worker_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_payments"
+        },
+        {
+          "column": "farmer_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_payments"
+        },
+        {
+          "column": "amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_payments"
+        },
+        {
+          "column": "payment_date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_payments"
+        },
+        {
+          "column": "payment_method",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_payments"
+        },
+        {
+          "column": "reference_no",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_payments"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_payments"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_payments"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 3,
+        "migration_matches_model": true,
+        "model_count": 3,
+        "sqlite_count": 3,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "farmer_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "farmer_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "farmer_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_work_events": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_work_events"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_work_events"
+        },
+        {
+          "column": "event_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_events"
+        },
+        {
+          "column": "performed_by",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_work_events"
+        },
+        {
+          "column": "server_timestamp",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_events"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_events"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_work_events"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "event_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id",
+              "id"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "event_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id",
+              "id"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "event_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "labour_job_id",
+              "id"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_work_sessions": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "session_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "start_time",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "end_time",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "duration_seconds",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_work_sessions"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_work_sessions"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "labour_workers": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_workers"
+        },
+        {
+          "column": "labour_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_workers"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "labour_workers"
+        },
+        {
+          "column": "name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_workers"
+        },
+        {
+          "column": "phone",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_workers"
+        },
+        {
+          "column": "role",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_workers"
+        },
+        {
+          "column": "total_days",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_workers"
+        },
+        {
+          "column": "total_hours",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_workers"
+        },
+        {
+          "column": "total_earned",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_workers"
+        },
+        {
+          "column": "total_paid",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_workers"
+        },
+        {
+          "column": "total_advance",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_workers"
+        },
+        {
+          "column": "pending_amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "labour_workers"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "labour_workers"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "labour_workers"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "labour_job_id"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "password_reset_otps": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "email",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "otp_hash",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "expires_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "verification_attempts",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "max_attempts",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "is_used",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "used_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "reset_token_hash",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "password_reset_otps"
+        },
+        {
+          "column": "reset_token_expires_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "password_reset_otps"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "email",
+              "is_used"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "is_used"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "email",
+              "is_used"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "is_used"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "email",
+              "is_used"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "is_used"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "plants": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "plants"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "plants"
+        },
+        {
+          "column": "crop_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "plants"
+        },
+        {
+          "column": "field_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "plants"
+        },
+        {
+          "column": "location",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "plants"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "plants"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "plants"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [],
+        "model_signatures": [],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": []
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "tractor_disputes": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "tractor_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "raised_by",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "reason",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "description",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "resolution",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "tractor_disputes"
+        },
+        {
+          "column": "resolved_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "tractor_disputes"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "tractor_job_id",
+              "status"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "tractor_job_id",
+              "status"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "tractor_job_id",
+              "status"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "tractor_jobs": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "job_id",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "join_token",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "farmer_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "driver_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "driver_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "driver_phone",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "tractor_number",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "crop",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "field_name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "work_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "work_date",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "field_size",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "rate",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "rate_unit",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "status",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "total_working_seconds",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "calculated_amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "final_amount",
+          "mapping": "NUMERIC_MAPPING",
+          "postgres_model_type": "DOUBLE PRECISION",
+          "sqlite_declared_type": "REAL",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "expense_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "tractor_jobs"
+        },
+        {
+          "column": "updated_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "tractor_jobs"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 3,
+        "migration_matches_model": true,
+        "model_count": 3,
+        "sqlite_count": 3,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "driver_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "farmer_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "work_date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": true
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": true
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "driver_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "farmer_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "work_date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": true
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": true
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "driver_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "farmer_id",
+              "status"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "work_date"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "job_id"
+            ],
+            "unique": true
+          },
+          {
+            "columns": [
+              "join_token"
+            ],
+            "unique": true
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "tractor_work_events": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_work_events"
+        },
+        {
+          "column": "tractor_job_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_work_events"
+        },
+        {
+          "column": "event_type",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_work_events"
+        },
+        {
+          "column": "performed_by",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "tractor_work_events"
+        },
+        {
+          "column": "server_timestamp",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_work_events"
+        },
+        {
+          "column": "notes",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "tractor_work_events"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "tractor_work_events"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 2,
+        "migration_matches_model": true,
+        "model_count": 2,
+        "sqlite_count": 2,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "event_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "tractor_job_id",
+              "id"
+            ],
+            "unique": false
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "event_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "tractor_job_id",
+              "id"
+            ],
+            "unique": false
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "event_type"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "tractor_job_id",
+              "id"
+            ],
+            "unique": false
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "user_sessions": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "user_sessions"
+        },
+        {
+          "column": "user_id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "user_sessions"
+        },
+        {
+          "column": "session_token_hash",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "user_sessions"
+        },
+        {
+          "column": "ip_address",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "user_sessions"
+        },
+        {
+          "column": "user_agent",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "user_sessions"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "user_sessions"
+        },
+        {
+          "column": "expires_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "user_sessions"
+        },
+        {
+          "column": "last_activity_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "user_sessions"
+        },
+        {
+          "column": "is_active",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "INTEGER",
+          "sqlite_declared_type": "INTEGER",
+          "table": "user_sessions"
+        },
+        {
+          "column": "revoked_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "user_sessions"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 1,
+        "migration_matches_model": true,
+        "model_count": 1,
+        "sqlite_count": 1,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "session_token_hash",
+              "is_active"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "is_active"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "session_token_hash"
+            ],
+            "unique": true
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "session_token_hash",
+              "is_active"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "is_active"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "session_token_hash"
+            ],
+            "unique": true
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "session_token_hash",
+              "is_active"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "user_id",
+              "is_active"
+            ],
+            "unique": false
+          },
+          {
+            "columns": [
+              "session_token_hash"
+            ],
+            "unique": true
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    },
+    "users": {
+      "column_differences": {
+        "extra_in_model": [],
+        "extra_in_postgres_migration": [],
+        "missing_from_model": [],
+        "missing_from_postgres_migration": []
+      },
+      "column_type_mappings": [
+        {
+          "column": "id",
+          "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+          "postgres_model_type": "BIGINT",
+          "sqlite_declared_type": "INTEGER",
+          "table": "users"
+        },
+        {
+          "column": "name",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "users"
+        },
+        {
+          "column": "email",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "users"
+        },
+        {
+          "column": "password_hash",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "users"
+        },
+        {
+          "column": "location",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "users"
+        },
+        {
+          "column": "language",
+          "mapping": "TEXT_COMPATIBLE",
+          "postgres_model_type": "TEXT",
+          "sqlite_declared_type": "TEXT",
+          "table": "users"
+        },
+        {
+          "column": "created_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "users"
+        },
+        {
+          "column": "last_login_at",
+          "mapping": "REVIEW_REQUIRED",
+          "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+          "sqlite_declared_type": "TIMESTAMP",
+          "table": "users"
+        }
+      ],
+      "foreign_keys": {
+        "migration_count": 0,
+        "migration_matches_model": true,
+        "model_count": 0,
+        "sqlite_count": 0,
+        "sqlite_matches_model": true
+      },
+      "indexes_and_unique_constraints": {
+        "migration_matches_model": true,
+        "migration_signatures": [
+          {
+            "columns": [
+              "email"
+            ],
+            "unique": true
+          }
+        ],
+        "model_signatures": [
+          {
+            "columns": [
+              "email"
+            ],
+            "unique": true
+          }
+        ],
+        "sqlite_matches_model": true,
+        "sqlite_signatures": [
+          {
+            "columns": [
+              "email"
+            ],
+            "unique": true
+          }
+        ]
+      },
+      "migration_column_type_mismatches": [],
+      "postgres_migration_present": true,
+      "primary_key": {
+        "migration_matches_model": true,
+        "postgres_migration": [
+          "id"
+        ],
+        "sqlalchemy": [
+          "id"
+        ],
+        "sqlite": [
+          "id"
+        ],
+        "sqlite_matches_model": true
+      },
+      "sqlalchemy_model_present": true,
+      "sqlite_table_present": true
+    }
+  },
+  "type_and_value_risks": [
+    "SQLite integer IDs map to PostgreSQL BIGINT/BIGSERIAL; preserve IDs and synchronize sequences.",
+    "SQLite REAL values map to PostgreSQL DOUBLE PRECISION; review money/quantity rounding expectations.",
+    "Text dates and timestamps require format/timezone/precision review.",
+    "JSON-named fields remain TEXT; do not silently cast to JSON/JSONB.",
+    "Boolean-like fields remain INTEGER; validate 0/1 semantics before any type change."
+  ],
+  "type_mapping_summary": {
+    "columns": [
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "alerts"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "alerts"
+      },
+      {
+        "column": "plant_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "alerts"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "alerts"
+      },
+      {
+        "column": "message",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "alerts"
+      },
+      {
+        "column": "read",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "alerts"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "alerts"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "soil_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "season",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "water_availability",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "previous_crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "location",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "recommended_crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "confidence",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "reason",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "crop_recommendations"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "crop_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "decision_scores"
+      },
+      {
+        "column": "overall_score",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "soil_score",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "weather_score",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "water_score",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "crop_score",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "decision_scores"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "decision_scores"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "disease_scans"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "disease_scans"
+      },
+      {
+        "column": "plant_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "disease_scans"
+      },
+      {
+        "column": "image_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "disease_scans"
+      },
+      {
+        "column": "disease_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "disease_scans"
+      },
+      {
+        "column": "confidence",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "disease_scans"
+      },
+      {
+        "column": "severity",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "disease_scans"
+      },
+      {
+        "column": "symptoms",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "disease_scans"
+      },
+      {
+        "column": "suggestions_json",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "disease_scans"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "disease_scans"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "field_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "activity_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "description",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "photo_path",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "updated_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_diary_entries"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "category",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "field_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "description",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "receipt_path",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "updated_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "bill_number",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "vendor_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "vendor_phone",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "vendor_address",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "receipt_source",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "raw_extracted_json",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "tax",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "discount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "payment_method",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "scanned_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_expenses"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farm_income"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farm_income"
+      },
+      {
+        "column": "date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_income"
+      },
+      {
+        "column": "crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_income"
+      },
+      {
+        "column": "quantity",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farm_income"
+      },
+      {
+        "column": "unit",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_income"
+      },
+      {
+        "column": "selling_price",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farm_income"
+      },
+      {
+        "column": "total_amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farm_income"
+      },
+      {
+        "column": "buyer_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_income"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farm_income"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_income"
+      },
+      {
+        "column": "updated_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "farm_income"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "farmer_profiles"
+      },
+      {
+        "column": "farm_size_acres",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "farmer_profiles"
+      },
+      {
+        "column": "soil_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farmer_profiles"
+      },
+      {
+        "column": "primary_crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "farmer_profiles"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "crop_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "moisture_pct",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "weather_condition",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "water_req",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "suggestion",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "irrigation_logs"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_advances"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_advances"
+      },
+      {
+        "column": "worker_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_advances"
+      },
+      {
+        "column": "worker_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_advances"
+      },
+      {
+        "column": "farmer_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_advances"
+      },
+      {
+        "column": "amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_advances"
+      },
+      {
+        "column": "advance_date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_advances"
+      },
+      {
+        "column": "payment_method",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_advances"
+      },
+      {
+        "column": "reference_no",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_advances"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_advances"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_advances"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "farmer_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "worker_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "terms_summary",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "farmer_agreed_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "worker_agreed_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_agreements"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "worker_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "worker_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "day_fraction",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "hours_worked",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "rate_applied",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "wage_amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "created_by",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_attendance"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "session_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "start_time",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "end_time",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "duration_seconds",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "reason",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_breaks"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "raised_by",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "reason",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "description",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "evidence_text",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "resolution",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "resolved_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_disputes"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "job_id",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "join_token",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "farmer_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "worker_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "worker_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "worker_phone",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "work_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "field_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "work_date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "expected_start_date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "expected_end_date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "payment_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "rate",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "num_workers",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "farmer_agreed",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "worker_agreed",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "farmer_confirmed",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "worker_confirmed",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "total_working_seconds",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "total_days_worked",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "total_earned",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "total_paid",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "total_advance",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "pending_amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "expense_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "updated_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_jobs"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_payments"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_payments"
+      },
+      {
+        "column": "worker_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_payments"
+      },
+      {
+        "column": "worker_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_payments"
+      },
+      {
+        "column": "farmer_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_payments"
+      },
+      {
+        "column": "amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_payments"
+      },
+      {
+        "column": "payment_date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_payments"
+      },
+      {
+        "column": "payment_method",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_payments"
+      },
+      {
+        "column": "reference_no",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_payments"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_payments"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_payments"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "event_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "performed_by",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "server_timestamp",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_work_events"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "session_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "start_time",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "end_time",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "duration_seconds",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_work_sessions"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_workers"
+      },
+      {
+        "column": "labour_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_workers"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "labour_workers"
+      },
+      {
+        "column": "name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_workers"
+      },
+      {
+        "column": "phone",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_workers"
+      },
+      {
+        "column": "role",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_workers"
+      },
+      {
+        "column": "total_days",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_workers"
+      },
+      {
+        "column": "total_hours",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_workers"
+      },
+      {
+        "column": "total_earned",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_workers"
+      },
+      {
+        "column": "total_paid",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_workers"
+      },
+      {
+        "column": "total_advance",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_workers"
+      },
+      {
+        "column": "pending_amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "labour_workers"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "labour_workers"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "labour_workers"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "email",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "otp_hash",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "expires_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "verification_attempts",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "max_attempts",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "is_used",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "used_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "reset_token_hash",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "reset_token_expires_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "password_reset_otps"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "plants"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "plants"
+      },
+      {
+        "column": "crop_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "plants"
+      },
+      {
+        "column": "field_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "plants"
+      },
+      {
+        "column": "location",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "plants"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "plants"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "plants"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "tractor_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "raised_by",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "reason",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "description",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "resolution",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "resolved_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "tractor_disputes"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "job_id",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "join_token",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "farmer_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "driver_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "driver_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "driver_phone",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "tractor_number",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "crop",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "field_name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "work_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "work_date",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "field_size",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "rate",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "rate_unit",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "status",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "total_working_seconds",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "calculated_amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "final_amount",
+        "mapping": "NUMERIC_MAPPING",
+        "postgres_model_type": "DOUBLE PRECISION",
+        "sqlite_declared_type": "REAL",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "expense_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "updated_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "tractor_jobs"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "tractor_job_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "event_type",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "performed_by",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "server_timestamp",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "notes",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "tractor_work_events"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "user_sessions"
+      },
+      {
+        "column": "user_id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "user_sessions"
+      },
+      {
+        "column": "session_token_hash",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "user_sessions"
+      },
+      {
+        "column": "ip_address",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "user_sessions"
+      },
+      {
+        "column": "user_agent",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "user_sessions"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "user_sessions"
+      },
+      {
+        "column": "expires_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "user_sessions"
+      },
+      {
+        "column": "last_activity_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "user_sessions"
+      },
+      {
+        "column": "is_active",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "INTEGER",
+        "sqlite_declared_type": "INTEGER",
+        "table": "user_sessions"
+      },
+      {
+        "column": "revoked_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "user_sessions"
+      },
+      {
+        "column": "id",
+        "mapping": "INTEGER_WIDTH_OR_IDENTITY_MAPPING",
+        "postgres_model_type": "BIGINT",
+        "sqlite_declared_type": "INTEGER",
+        "table": "users"
+      },
+      {
+        "column": "name",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "users"
+      },
+      {
+        "column": "email",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "users"
+      },
+      {
+        "column": "password_hash",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "users"
+      },
+      {
+        "column": "location",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "users"
+      },
+      {
+        "column": "language",
+        "mapping": "TEXT_COMPATIBLE",
+        "postgres_model_type": "TEXT",
+        "sqlite_declared_type": "TEXT",
+        "table": "users"
+      },
+      {
+        "column": "created_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "users"
+      },
+      {
+        "column": "last_login_at",
+        "mapping": "REVIEW_REQUIRED",
+        "postgres_model_type": "TIMESTAMP WITHOUT TIME ZONE",
+        "sqlite_declared_type": "TIMESTAMP",
+        "table": "users"
+      }
+    ],
+    "columns_compared": 291,
+    "review_required_note": "All 42 REVIEW_REQUIRED mappings are SQLite TIMESTAMP declarations mapped to PostgreSQL TIMESTAMP WITHOUT TIME ZONE; confirm source formats, timezone assumptions, and precision before migration. These are review items, not detected schema mismatches.",
+    "mapping_counts": {
+      "INTEGER_WIDTH_OR_IDENTITY_MAPPING": 92,
+      "NUMERIC_MAPPING": 29,
+      "REVIEW_REQUIRED": 42,
+      "TEXT_COMPATIBLE": 128
+    }
+  }
+}

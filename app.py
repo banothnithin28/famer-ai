@@ -47,7 +47,28 @@ _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 load_dotenv(_env_path)
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'fallback_dev_secret_change_in_production')
+
+_INSECURE_SECRET_KEY_VALUES = {
+    'fallback_dev_secret_change_in_production',
+    'your_strong_random_secret_key_here',
+}
+
+
+def _validate_secret_key(secret_key):
+    if (
+        not secret_key
+        or secret_key != secret_key.strip()
+        or len(secret_key.encode('utf-8')) < 32
+        or secret_key.lower() in _INSECURE_SECRET_KEY_VALUES
+        or secret_key.lower().startswith(('your_', 'change-me', 'changeme'))
+    ):
+        raise RuntimeError(
+            'SECRET_KEY must be configured with a random value of at least 32 bytes.'
+        )
+    return secret_key
+
+
+app.secret_key = _validate_secret_key(os.getenv('SECRET_KEY'))
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 configured_origins = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 allowed_origins = {
@@ -553,37 +574,44 @@ def revoke_all_user_sessions(user_id):
 def get_current_user():
     user_id = session.get('user_id')
     if not user_id:
+        session.clear()
         return None
 
     session_token = session.get('session_token')
+    if not isinstance(session_token, str) or not session_token:
+        session.clear()
+        return None
+
     conn = get_db()
 
-    if session_token:
-        token_hash = hashlib.sha256(session_token.encode('utf-8')).hexdigest()
-        sess_record = conn.execute(
-            "SELECT id, expires_at, is_active FROM user_sessions WHERE session_token_hash = ? AND user_id = ? AND is_active = 1",
-            (token_hash, user_id)
-        ).fetchone()
+    token_hash = hashlib.sha256(session_token.encode('utf-8')).hexdigest()
+    sess_record = conn.execute(
+        "SELECT id, expires_at FROM user_sessions WHERE session_token_hash = ? AND user_id = ? AND is_active = 1",
+        (token_hash, user_id)
+    ).fetchone()
 
-        if not sess_record:
-            conn.close()
-            session.clear()
-            return None
+    if not sess_record:
+        conn.close()
+        session.clear()
+        return None
 
-        now_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-        if sess_record['expires_at'] < now_str:
-            conn.execute("UPDATE user_sessions SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE id = ?", (sess_record['id'],))
-            conn.commit()
-            conn.close()
-            session.clear()
-            return None
-
-        conn.execute("UPDATE user_sessions SET last_activity_at = CURRENT_TIMESTAMP WHERE id = ?", (sess_record['id'],))
+    now_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    if sess_record['expires_at'] < now_str:
+        conn.execute("UPDATE user_sessions SET is_active = 0, revoked_at = CURRENT_TIMESTAMP WHERE id = ?", (sess_record['id'],))
         conn.commit()
+        conn.close()
+        session.clear()
+        return None
+
+    conn.execute("UPDATE user_sessions SET last_activity_at = CURRENT_TIMESTAMP WHERE id = ?", (sess_record['id'],))
+    conn.commit()
 
     user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
-    return dict(user) if user else None
+    if not user:
+        session.clear()
+        return None
+    return dict(user)
 
 
 # ==========================================
@@ -1334,32 +1362,29 @@ def api_auth_logout():
 @app.route('/api/dashboard/summary', methods=['GET'])
 def api_dashboard_summary():
     user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Please sign in to view your dashboard.'}), 401
+
     conn = get_db()
-
-    user_id = user['id'] if user else None
-
-    if user_id:
-        latest_crop = conn.execute(
-            "SELECT * FROM crop_recommendations WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
-        ).fetchone()
-        latest_score = conn.execute(
-            "SELECT * FROM decision_scores WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
-        ).fetchone()
-        recent_scans = conn.execute(
-            "SELECT * FROM disease_scans WHERE user_id = ? ORDER BY id DESC LIMIT 3", (user_id,)
-        ).fetchall()
-        total_crops = conn.execute("SELECT COUNT(*) as count FROM crop_recommendations WHERE user_id = ?", (user_id,)).fetchone()['count']
-        total_scans = conn.execute("SELECT COUNT(*) as count FROM disease_scans WHERE user_id = ?", (user_id,)).fetchone()['count']
-    else:
-        latest_crop = conn.execute("SELECT * FROM crop_recommendations ORDER BY id DESC LIMIT 1").fetchone()
-        latest_score = conn.execute("SELECT * FROM decision_scores ORDER BY id DESC LIMIT 1").fetchone()
-        recent_scans = conn.execute("SELECT * FROM disease_scans ORDER BY id DESC LIMIT 3").fetchall()
-        total_crops = conn.execute("SELECT COUNT(*) as count FROM crop_recommendations").fetchone()['count']
-        total_scans = conn.execute("SELECT COUNT(*) as count FROM disease_scans").fetchone()['count']
-
+    user_id = user['id']
+    latest_crop = conn.execute(
+        "SELECT * FROM crop_recommendations WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
+    ).fetchone()
+    latest_score = conn.execute(
+        "SELECT * FROM decision_scores WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
+    ).fetchone()
+    recent_scans = conn.execute(
+        "SELECT * FROM disease_scans WHERE user_id = ? ORDER BY id DESC LIMIT 3", (user_id,)
+    ).fetchall()
+    total_crops = conn.execute(
+        "SELECT COUNT(*) as count FROM crop_recommendations WHERE user_id = ?", (user_id,)
+    ).fetchone()['count']
+    total_scans = conn.execute(
+        "SELECT COUNT(*) as count FROM disease_scans WHERE user_id = ?", (user_id,)
+    ).fetchone()['count']
     avg_conf_row = conn.execute(
-        "SELECT AVG(confidence) as avg_c FROM disease_scans WHERE user_id = ?" if user_id else "SELECT AVG(confidence) as avg_c FROM disease_scans",
-        (user_id,) if user_id else ()
+        "SELECT AVG(confidence) as avg_c FROM disease_scans WHERE user_id = ?",
+        (user_id,)
     ).fetchone()
     diagnostic_stat = f"{int(round(avg_conf_row['avg_c']))}%" if avg_conf_row and avg_conf_row['avg_c'] else "Direct ML"
 
@@ -1655,7 +1680,8 @@ def api_recommend_crop():
 
         crop_name = encoders['target'].inverse_transform([pred_idx])[0]
 
-        user_id = session.get('user_id')
+        user = get_current_user()
+        user_id = user['id'] if user else None
         reason_text = f"Suitable {soil.lower()} soil + current {season} season + {water.lower()} available water conditions."
         if user_id:
             conn = get_db()
@@ -1999,7 +2025,8 @@ def api_irrigation_advice():
         water_req = "Low"
         suggestion = f"Optimal moisture levels ({moisture}%) maintained for {crop}. No immediate irrigation required."
 
-    user_id = session.get('user_id')
+    user = get_current_user()
+    user_id = user['id'] if user else None
     if user_id:
         conn = get_db()
         conn.execute(
@@ -2040,7 +2067,8 @@ def api_decision_score():
     else:
         verdict = f"Moderate suitability score of {overall_score}/100. Consider alternative drought-tolerant crops or soil conditioning."
 
-    user_id = session.get('user_id')
+    user = get_current_user()
+    user_id = user['id'] if user else None
     if user_id:
         conn = get_db()
         conn.execute(
@@ -2064,16 +2092,20 @@ def api_decision_score():
 
 def build_farmer_context(user, plant_id=None, latitude=None, longitude=None, question=None, history=None):
     """Compatibility wrapper for the secure farm-context builder used by the chatbot."""
-    return build_farm_data_context(
-        user,
-        plant_id=plant_id,
-        latitude=latitude,
-        longitude=longitude,
-        question=question,
-        history=history,
-        get_db_fn=get_db,
-        fetch_weather_fn=fetch_live_weather,
-    )
+    connection = get_db()
+    try:
+        return build_farm_data_context(
+            user,
+            plant_id=plant_id,
+            latitude=latitude,
+            longitude=longitude,
+            question=question,
+            history=history,
+            get_db_fn=lambda: connection,
+            fetch_weather_fn=fetch_live_weather,
+        )
+    finally:
+        connection.close()
 
 
 def format_gemini_contents(history, current_message):
@@ -5231,14 +5263,22 @@ def recalculate_labour_job_finances(conn, job_id_pk):
     for w in workers:
         wid = w['id']
         wname = w['name']
+        same_name_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM labour_workers WHERE labour_job_id = ? AND name = ?",
+            (job_id_pk, wname)
+        ).fetchone()['count']
+        allow_legacy_name_match = same_name_count == 1
 
         w_att = conn.execute(
             """SELECT COALESCE(SUM(day_fraction), 0) as days,
                       COALESCE(SUM(hours_worked), 0) as hrs,
                       COALESCE(SUM(wage_amount), 0) as wage
                FROM labour_attendance
-               WHERE labour_job_id = ? AND (worker_id = ? OR worker_name = ?)""",
-            (job_id_pk, wid, wname)
+               WHERE labour_job_id = ? AND (
+                   worker_id = ?
+                   OR (? = 1 AND worker_id IS NULL AND worker_name = ?)
+               )""",
+            (job_id_pk, wid, allow_legacy_name_match, wname)
         ).fetchone()
 
         w_days = round(float(w_att['days'] or 0.0), 2)
@@ -5252,13 +5292,21 @@ def recalculate_labour_job_finances(conn, job_id_pk):
             w_earned = round(rate / max(1, len(workers)), 2)
 
         w_adv = float(conn.execute(
-            "SELECT COALESCE(SUM(amount), 0) as s FROM labour_advances WHERE labour_job_id = ? AND (worker_id = ? OR worker_name = ?)",
-            (job_id_pk, wid, wname)
+            """SELECT COALESCE(SUM(amount), 0) as s FROM labour_advances
+               WHERE labour_job_id = ? AND (
+                   worker_id = ?
+                   OR (? = 1 AND worker_id IS NULL AND worker_name = ?)
+               )""",
+            (job_id_pk, wid, allow_legacy_name_match, wname)
         ).fetchone()['s'] or 0.0)
 
         w_pay = float(conn.execute(
-            "SELECT COALESCE(SUM(amount), 0) as s FROM labour_payments WHERE labour_job_id = ? AND (worker_id = ? OR worker_name = ?)",
-            (job_id_pk, wid, wname)
+            """SELECT COALESCE(SUM(amount), 0) as s FROM labour_payments
+               WHERE labour_job_id = ? AND (
+                   worker_id = ?
+                   OR (? = 1 AND worker_id IS NULL AND worker_name = ?)
+               )""",
+            (job_id_pk, wid, allow_legacy_name_match, wname)
         ).fetchone()['s'] or 0.0)
 
         w_pending = max(0.0, round(w_earned - (w_pay + w_adv), 2))
@@ -5442,15 +5490,12 @@ def api_get_labour_jobs():
         query += " AND l.farmer_id = ?"
         params.append(uid)
     elif role == 'worker':
-        query += " AND (l.worker_id = ? OR l.worker_name = ?)"
+        query += " AND l.worker_id = ?"
         params.append(uid)
-        params.append(user['name'])
     else:
-        # Default: user is farmer or worker on the job
-        query += " AND (l.farmer_id = ? OR l.worker_id = ? OR l.worker_name = ?)"
+        query += " AND (l.farmer_id = ? OR l.worker_id = ?)"
         params.append(uid)
         params.append(uid)
-        params.append(user['name'])
 
     if status:
         query += " AND l.status = ?"
@@ -5583,10 +5628,28 @@ def api_get_labour_job_detail(identifier):
         conn.close()
         return jsonify({'success': False, 'error': 'Labour job not found.'}), 404
 
+    is_participant = user['id'] == row['farmer_id'] or user['id'] == row['worker_id']
+    if not is_participant:
+        if row['status'] == 'CREATED' and row['worker_id'] is None:
+            preview_fields = (
+                'job_id',
+                'work_type',
+                'crop',
+                'work_date',
+                'payment_type',
+                'rate',
+                'num_workers',
+                'status',
+            )
+            preview = {field: row[field] for field in preview_fields}
+            conn.close()
+            return jsonify({'success': True, 'job': preview})
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to view this labour job.'}), 403
+
     serialized = serialize_labour_job(row, user_id=user['id'], conn=conn)
     conn.close()
 
-    # Allow preview for joining, or full access if authorized
     return jsonify({'success': True, 'job': serialized})
 
 
@@ -5609,26 +5672,69 @@ def api_join_labour_job(identifier):
         conn.close()
         return jsonify({'success': False, 'error': 'Labour job not found.'}), 404
 
+    if row['farmer_id'] == user['id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'A farmer cannot join their own labour job.'}), 403
+
+    if row['worker_id'] == user['id']:
+        serialized = serialize_labour_job(row, user_id=user['id'], conn=conn)
+        conn.close()
+        return jsonify({
+            'success': True,
+            'message': f"Joined labour job {row['job_id']} successfully.",
+            'job': serialized
+        })
+
+    if row['worker_id'] is not None or row['status'] != 'CREATED':
+        conn.close()
+        return jsonify({'success': False, 'error': 'This labour job is no longer available to join.'}), 409
+
     job_pk = row['id']
     server_now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     worker_user_name = user['name']
 
-    # Update job worker_id
-    conn.execute("""
-        UPDATE labour_jobs
-        SET worker_id = ?, status = CASE WHEN status = 'CREATED' THEN 'WORKER_JOINED' ELSE status END, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    """, (user['id'], job_pk))
+    try:
+        update_cursor = conn.execute("""
+            UPDATE labour_jobs
+            SET worker_id = ?, status = 'WORKER_JOINED', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND worker_id IS NULL AND status = 'CREATED'
+        """, (user['id'], job_pk))
+    except sqlite3.OperationalError as error:
+        conn.rollback()
+        conn.close()
+        if 'locked' in str(error).lower() or 'busy' in str(error).lower():
+            return jsonify({'success': False, 'error': 'This labour job was joined by another worker.'}), 409
+        raise
+
+    if update_cursor.rowcount != 1:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'error': 'This labour job was joined by another worker.'}), 409
 
     # Update worker roster record or create one
     existing_w = conn.execute(
-        "SELECT id FROM labour_workers WHERE labour_job_id = ? AND (user_id = ? OR name = ?)",
-        (job_pk, user['id'], worker_user_name)
+        "SELECT id FROM labour_workers WHERE labour_job_id = ? AND user_id = ?",
+        (job_pk, user['id'])
     ).fetchone()
     if existing_w:
         conn.execute("UPDATE labour_workers SET user_id = ?, name = ? WHERE id = ?", (user['id'], worker_user_name, existing_w['id']))
     else:
-        conn.execute("INSERT INTO labour_workers (labour_job_id, user_id, name, role) VALUES (?, ?, ?, 'worker')", (job_pk, user['id'], worker_user_name))
+        placeholder = conn.execute(
+            """SELECT id FROM labour_workers
+               WHERE labour_job_id = ? AND user_id IS NULL AND name = ?
+               ORDER BY id LIMIT 1""",
+            (job_pk, worker_user_name)
+        ).fetchone()
+        if placeholder:
+            conn.execute(
+                "UPDATE labour_workers SET user_id = ?, name = ? WHERE id = ? AND user_id IS NULL",
+                (user['id'], worker_user_name, placeholder['id'])
+            )
+        else:
+            conn.execute(
+                "INSERT INTO labour_workers (labour_job_id, user_id, name, role) VALUES (?, ?, ?, 'worker')",
+                (job_pk, user['id'], worker_user_name)
+            )
 
     conn.execute("""
         INSERT INTO labour_work_events (labour_job_id, event_type, performed_by, server_timestamp, notes)
@@ -5662,7 +5768,7 @@ def api_agree_labour_job(job_id):
         return jsonify({'success': False, 'error': 'Job not found.'}), 404
 
     is_farmer = (user['id'] == job['farmer_id'])
-    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    is_worker = user['id'] == job['worker_id']
 
     if not is_farmer and not is_worker:
         conn.close()
@@ -5722,7 +5828,7 @@ def api_mark_labour_attendance(job_id):
         return jsonify({'success': False, 'error': 'Job not found.'}), 404
 
     is_farmer = (user['id'] == job['farmer_id'])
-    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    is_worker = user['id'] == job['worker_id']
     if not is_farmer and not is_worker:
         conn.close()
         return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
@@ -5738,6 +5844,24 @@ def api_mark_labour_attendance(job_id):
 
     worker_name = str(data.get('worker_name', '')).strip() or job['worker_name']
     worker_id = data.get('worker_id')
+    if is_worker and not is_farmer:
+        assigned_worker = conn.execute(
+            "SELECT id FROM labour_workers WHERE labour_job_id = ? AND user_id = ?",
+            (job_id, user['id'])
+        ).fetchone()
+        if not assigned_worker:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Worker roster entry not found.'}), 403
+        worker_id = assigned_worker['id']
+        worker_name = user['name']
+    elif worker_id:
+        assigned_worker = conn.execute(
+            "SELECT id FROM labour_workers WHERE id = ? AND labour_job_id = ?",
+            (worker_id, job_id)
+        ).fetchone()
+        if not assigned_worker:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Worker does not belong to this job.'}), 400
     status = str(data.get('status', 'PRESENT')).strip().upper()
     notes = str(data.get('notes', '')).strip() or None
 
@@ -5843,6 +5967,10 @@ def api_get_labour_attendance(job_id):
     if not job:
         conn.close()
         return jsonify({'success': False, 'error': 'Job not found.'}), 404
+
+    if user['id'] != job['farmer_id'] and user['id'] != job['worker_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Unauthorized to view attendance for this job.'}), 403
 
     rows = conn.execute(
         """SELECT a.*, u.name as created_by_name
@@ -6073,7 +6201,7 @@ def api_confirm_finish_labour_job(job_id):
         return jsonify({'success': False, 'error': 'Job not found.'}), 404
 
     is_farmer = (user['id'] == job['farmer_id'])
-    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    is_worker = user['id'] == job['worker_id']
     if not is_farmer and not is_worker:
         conn.close()
         return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
@@ -6255,7 +6383,7 @@ def api_dispute_labour_job(job_id):
         return jsonify({'success': False, 'error': 'Job not found.'}), 404
 
     is_farmer = (user['id'] == job['farmer_id'])
-    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    is_worker = user['id'] == job['worker_id']
     if not is_farmer and not is_worker:
         conn.close()
         return jsonify({'success': False, 'error': 'Unauthorized.'}), 403
@@ -6309,7 +6437,7 @@ def api_resolve_dispute_labour_job(job_id):
         return jsonify({'success': False, 'error': 'Job not found.'}), 404
 
     is_farmer = (user['id'] == job['farmer_id'])
-    is_worker = (user['id'] == job['worker_id'] or user['name'] == job['worker_name'])
+    is_worker = user['id'] == job['worker_id']
     if not is_farmer and not is_worker:
         conn.close()
         return jsonify({'success': False, 'error': 'Unauthorized.'}), 403

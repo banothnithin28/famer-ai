@@ -18,13 +18,38 @@ Validates:
 15. Farmer AI (Gemini Assistant) database grounding for labour queries.
 """
 
+import contextlib
+import io
 import os
+import secrets
+import sys
 import time
 import datetime
 import json
-from app import app, get_db
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
-def run_tests():
+
+class _MockGeminiModels:
+    def __init__(self):
+        self._responses = iter((
+            "Cotton labour cost was Rs. 1,250.",
+            "Pending wages are Rs. 0.",
+            "Ramesh worked 2.5 days.",
+        ))
+
+    def generate_content(self, **_kwargs):
+        return SimpleNamespace(text=next(self._responses))
+
+
+class _MockGeminiClient:
+    def __init__(self):
+        self.models = _MockGeminiModels()
+
+
+def _run_test_scenarios(app, app_module, mock_gemini_client):
     print("=" * 75)
     print("       FARMER AI: PHASE 3 LABOUR WORK TRACKER AUTOMATED TEST SUITE")
     print("=" * 75)
@@ -75,7 +100,7 @@ def run_tests():
         "expected_end_date": "2026-10-10",
         "notes": "Cotton picking round 1"
     })
-    assert create_res.status_code == 201, f"Create labour job failed: {create_res.get_json()}"
+    assert create_res.status_code == 201, f"Create labour job failed with status {create_res.status_code}"
     job_data = create_res.get_json()['job']
     job_id_pk = job_data['id']
     job_code = job_data['job_id']
@@ -86,7 +111,7 @@ def run_tests():
     assert job_data['farmer_id'] == farmer_id
     assert job_data['rate'] == 500.0
     assert job_data['payment_type'] == 'per_day'
-    print(f"  -> Passed: Created Labour Job {job_code} (PK: {job_id_pk}, Token: {join_token})")
+    print(f"  -> Passed: Created Labour Job {job_code} (PK: {job_id_pk}, join token withheld)")
 
     # =========================================================================
     # TEST 2: Worker previews and joins Labour Job via Job ID / QR Token
@@ -102,7 +127,7 @@ def run_tests():
 
     # Join job
     join_res = client.post(f'/api/labour/jobs/{job_code}/join')
-    assert join_res.status_code == 200, f"Join failed: {join_res.get_json()}"
+    assert join_res.status_code == 200, f"Join failed with status {join_res.status_code}"
     joined_job = join_res.get_json()['job']
     assert joined_job['status'] == 'WORKER_JOINED'
     assert joined_job['worker_id'] == worker_id
@@ -389,29 +414,121 @@ def run_tests():
     client.post('/api/auth/login', json={"email": farmer_email, "password": password})
 
     # Query 1: Labour cost for cotton
-    ai_cotton = client.post('/api/gemini/chat', json={"message": "How much did I spend on labour for cotton?"})
-    assert ai_cotton.status_code == 200
-    cotton_reply = (ai_cotton.get_json().get('reply') or '').lower()
-    assert "cotton" in cotton_reply or "labour" in cotton_reply or "1,250" in cotton_reply or "1250" in cotton_reply
-    print("  -> Passed: AI answered cotton labour query with database context")
+    with patch.object(
+        app_module,
+        "get_gemini_client",
+        return_value=mock_gemini_client,
+    ):
+        ai_cotton = client.post('/api/gemini/chat', json={"message": "How much did I spend on labour for cotton?"})
+        assert ai_cotton.status_code == 200
+        cotton_reply = (ai_cotton.get_json().get('reply') or '').lower()
+        assert "cotton" in cotton_reply or "labour" in cotton_reply or "1,250" in cotton_reply or "1250" in cotton_reply
+        print("  -> Passed: AI answered cotton labour query with database context")
 
-    # Query 2: Pending worker wages
-    ai_owe = client.post('/api/gemini/chat', json={"message": "How much do I still owe my workers?"})
-    assert ai_owe.status_code == 200
-    owe_reply = (ai_owe.get_json().get('reply') or '').lower()
-    assert any(k in owe_reply for k in ("pending", "wages", "rs", "₹", "0", "owe", "settled", "paid"))
-    print("  -> Passed: AI answered pending wages query with database context")
+        # Query 2: Pending worker wages
+        ai_owe = client.post('/api/gemini/chat', json={"message": "How much do I still owe my workers?"})
+        assert ai_owe.status_code == 200
+        owe_reply = (ai_owe.get_json().get('reply') or '').lower()
+        assert any(k in owe_reply for k in ("pending", "wages", "rs", "₹", "0", "owe", "settled", "paid"))
+        print("  -> Passed: AI answered pending wages query with database context")
 
-    # Query 3: Ramesh worker history
-    ai_ramesh = client.post('/api/gemini/chat', json={"message": "How many days did Ramesh work?"})
-    assert ai_ramesh.status_code == 200
-    ramesh_reply = (ai_ramesh.get_json().get('reply') or '').lower()
-    assert "ramesh" in ramesh_reply or "2.5" in ramesh_reply or "days" in ramesh_reply
-    print("  -> Passed: AI answered worker-specific query using database records")
+        # Query 3: Ramesh worker history
+        ai_ramesh = client.post('/api/gemini/chat', json={"message": "How many days did Ramesh work?"})
+        assert ai_ramesh.status_code == 200
+        ramesh_reply = (ai_ramesh.get_json().get('reply') or '').lower()
+        assert "ramesh" in ramesh_reply or "2.5" in ramesh_reply or "days" in ramesh_reply
+        print("  -> Passed: AI answered worker-specific query using database records")
 
     print("\n" + "=" * 75)
     print("      ALL 15 AUTOMATED TESTS PASSED SUCCESSFULLY! (PHASE 3 COMPLETE)")
     print("=" * 75)
+
+
+def run_tests():
+    environment_keys = (
+        "DB_PATH",
+        "UPLOAD_FOLDER",
+        "SECRET_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+    )
+    previous_environment = {
+        key: os.environ.get(key)
+        for key in environment_keys
+    }
+    temporary_root = None
+    app_module = None
+    imported_app = False
+    connection_stack = contextlib.ExitStack()
+    original_get_db = None
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="farmer-ai-labour-tests-") as temp_dir:
+            temporary_root = Path(temp_dir).resolve()
+            test_database = temporary_root / "farmer_test.db"
+            test_uploads = temporary_root / "uploads"
+            os.environ["DB_PATH"] = str(test_database)
+            os.environ["UPLOAD_FOLDER"] = str(test_uploads)
+            os.environ["SECRET_KEY"] = secrets.token_urlsafe(32)
+            os.environ["GEMINI_API_KEY"] = ""
+            os.environ["GOOGLE_API_KEY"] = ""
+
+            try:
+                if "app" in sys.modules:
+                    raise RuntimeError(
+                        "Run this suite in a fresh process so app initialization "
+                        "uses the temporary test database."
+                    )
+
+                with contextlib.redirect_stdout(io.StringIO()):
+                    import app as app_module
+                imported_app = True
+
+                if Path(app_module.DB_PATH).resolve() != test_database:
+                    raise RuntimeError(
+                        "Application database path is not the temporary test database."
+                    )
+                resolved_uploads = Path(app_module.UPLOAD_FOLDER).resolve()
+                if temporary_root not in resolved_uploads.parents:
+                    raise RuntimeError(
+                        "Application upload path is not inside the temporary test directory."
+                    )
+
+                original_get_db = app_module.get_db
+
+                def tracked_get_db():
+                    connection = original_get_db()
+                    connection_stack.callback(connection.close)
+                    return connection
+
+                app_module.get_db = tracked_get_db
+                app_module.app.config["TESTING"] = True
+                try:
+                    _run_test_scenarios(
+                        app_module.app,
+                        app_module,
+                        _MockGeminiClient(),
+                    )
+                finally:
+                    try:
+                        connection_stack.close()
+                    finally:
+                        app_module.get_db = original_get_db
+            finally:
+                if imported_app:
+                    sys.modules.pop("app", None)
+                app_module = None
+    finally:
+        for key, value in previous_environment.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        if temporary_root is not None:
+            if temporary_root.exists():
+                raise RuntimeError("Temporary labour test data was not cleaned up.")
+            print("Temporary database and uploads cleaned up.")
+
 
 if __name__ == '__main__':
     run_tests()

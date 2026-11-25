@@ -1,0 +1,3984 @@
+{
+  "foreign_key_definition_count": 45,
+  "foreign_key_violation_rows": 0,
+  "integrity_check": "ok",
+  "orphan_reference_count": 0,
+  "source": {
+    "exists": true,
+    "file_unchanged_during_inspection": true,
+    "query_only_verified": true,
+    "read_only_uri_mode": true,
+    "relative_path": "database/farmer.db",
+    "sidecars_present_after_inspection": false,
+    "size_bytes": 622592,
+    "statement_classes": [
+      "PRAGMA",
+      "ROLLBACK",
+      "SELECT"
+    ]
+  },
+  "table_count": 26,
+  "tables": [
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 7,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "plant_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "message",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0",
+          "name": "read",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE alerts (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    plant_id INTEGER,\n    status TEXT NOT NULL,\n    message TEXT NOT NULL,\n    read INTEGER NOT NULL DEFAULT 0,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n    FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE SET NULL\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "plant_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "plants"
+        },
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "empty_without_sequence_entry",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "alerts",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 0,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 11,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "soil_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "season",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "water_availability",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "previous_crop",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "location",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "recommended_crop",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "confidence",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "reason",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE crop_recommendations (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    soil_type TEXT NOT NULL,\n    season TEXT NOT NULL,\n    water_availability TEXT NOT NULL,\n    previous_crop TEXT NOT NULL,\n    location TEXT NOT NULL,\n    recommended_crop TEXT NOT NULL,\n    confidence INTEGER NOT NULL,\n    reason TEXT NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "crop_recommendations",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 21,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 9,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "crop_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "overall_score",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "soil_score",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "weather_score",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "water_score",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "crop_score",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE decision_scores (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    crop_name TEXT NOT NULL,\n    overall_score INTEGER NOT NULL,\n    soil_score INTEGER NOT NULL,\n    weather_score INTEGER NOT NULL,\n    water_score INTEGER NOT NULL,\n    crop_score INTEGER NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "empty_without_sequence_entry",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "decision_scores",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 0,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 10,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "plant_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "image_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "disease_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "confidence",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "'Unknown'",
+          "name": "severity",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "symptoms",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "suggestions_json",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE disease_scans (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    plant_id INTEGER,\n    image_name TEXT NOT NULL,\n    disease_name TEXT NOT NULL,\n    confidence INTEGER NOT NULL,\n    severity TEXT NOT NULL DEFAULT 'Unknown',\n    symptoms TEXT,\n    suggestions_json TEXT NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n    FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE SET NULL\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "plant_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "plants"
+        },
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "disease_scans",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 6,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 11,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "crop",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "field_name",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "activity_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "description",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "photo_path",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "updated_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE farm_diary_entries (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    date TEXT NOT NULL,\n    crop TEXT,\n    field_name TEXT,\n    activity_type TEXT NOT NULL,\n    description TEXT,\n    notes TEXT,\n    photo_path TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "user_id",
+            "activity_type"
+          ],
+          "name": "idx_farm_diary_user_act",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "crop"
+          ],
+          "name": "idx_farm_diary_user_crop",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "date"
+          ],
+          "name": "idx_farm_diary_user_date",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "farm_diary_entries",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 3,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 21,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "category",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "crop",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "field_name",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "description",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "receipt_path",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "updated_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "bill_number",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "vendor_name",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "vendor_phone",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "vendor_address",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'MANUAL'",
+          "name": "receipt_source",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "raw_extracted_json",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0.0",
+          "name": "tax",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "discount",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "payment_method",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "scanned_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE farm_expenses (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    date TEXT NOT NULL,\n    category TEXT NOT NULL,\n    amount REAL NOT NULL,\n    crop TEXT,\n    field_name TEXT,\n    description TEXT,\n    receipt_path TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, bill_number TEXT, vendor_name TEXT, vendor_phone TEXT, vendor_address TEXT, receipt_source TEXT DEFAULT 'MANUAL', raw_extracted_json TEXT, tax REAL DEFAULT 0.0, discount REAL DEFAULT 0.0, payment_method TEXT, scanned_at TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "user_id",
+            "bill_number"
+          ],
+          "name": "idx_farm_expenses_user_bill",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "category"
+          ],
+          "name": "idx_farm_expenses_user_cat",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "crop"
+          ],
+          "name": "idx_farm_expenses_user_crop",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "date"
+          ],
+          "name": "idx_farm_expenses_user_date",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "receipt_source"
+          ],
+          "name": "idx_farm_expenses_user_source",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "farm_expenses",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 66,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 12,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "crop",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "quantity",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "'kg'",
+          "name": "unit",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "selling_price",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "total_amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "buyer_name",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "updated_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE farm_income (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    date TEXT NOT NULL,\n    crop TEXT NOT NULL,\n    quantity REAL NOT NULL,\n    unit TEXT NOT NULL DEFAULT 'kg',\n    selling_price REAL NOT NULL,\n    total_amount REAL NOT NULL,\n    buyer_name TEXT,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "user_id",
+            "crop"
+          ],
+          "name": "idx_farm_income_user_crop",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "date"
+          ],
+          "name": "idx_farm_income_user_date",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "farm_income",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 8,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "non_generated_foreign_key_primary_key",
+      "column_count": 4,
+      "columns": [
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "5.0",
+          "name": "farm_size_acres",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "'Black'",
+          "name": "soil_type",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'Cotton'",
+          "name": "primary_crop",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        }
+      ],
+      "create_sql": "CREATE TABLE farmer_profiles (\n    user_id INTEGER PRIMARY KEY,\n    farm_size_acres REAL DEFAULT 5.0,\n    soil_type TEXT DEFAULT 'Black',\n    primary_crop TEXT DEFAULT 'Cotton',\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "not_applicable_non_generated_primary_key",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "farmer_profiles",
+      "primary_key": [
+        "user_id"
+      ],
+      "row_count": 120,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 8,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "crop_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "moisture_pct",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "weather_condition",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "water_req",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "suggestion",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE irrigation_logs (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    crop_type TEXT NOT NULL,\n    moisture_pct INTEGER NOT NULL,\n    weather_condition TEXT NOT NULL,\n    water_req TEXT NOT NULL,\n    suggestion TEXT NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "empty_without_sequence_entry",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "irrigation_logs",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 0,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 11,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "farmer_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "advance_date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'Cash'",
+          "name": "payment_method",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "reference_no",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_advances (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    worker_id INTEGER,\n    worker_name TEXT NOT NULL,\n    farmer_id INTEGER NOT NULL,\n    amount REAL NOT NULL,\n    advance_date TEXT NOT NULL,\n    payment_method TEXT NOT NULL DEFAULT 'Cash',\n    reference_no TEXT,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(worker_id) REFERENCES labour_workers(id) ON DELETE SET NULL,\n    FOREIGN KEY(farmer_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "farmer_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "worker_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_workers"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "farmer_id"
+          ],
+          "name": "idx_labour_advances_farmer",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "labour_job_id"
+          ],
+          "name": "idx_labour_advances_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "labour_advances",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 11,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 9,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "farmer_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "terms_summary",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "farmer_agreed_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "worker_agreed_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "'PENDING'",
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_agreements (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    farmer_id INTEGER NOT NULL,\n    worker_id INTEGER,\n    terms_summary TEXT NOT NULL,\n    farmer_agreed_at TIMESTAMP,\n    worker_agreed_at TIMESTAMP,\n    status TEXT NOT NULL DEFAULT 'PENDING',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(farmer_id) REFERENCES users(id) ON DELETE CASCADE,\n    FOREIGN KEY(worker_id) REFERENCES users(id) ON DELETE SET NULL\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "worker_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "farmer_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "labour_job_id"
+          ],
+          "name": "idx_labour_agreements_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "labour_agreements",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 34,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 13,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "1.0",
+          "name": "day_fraction",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "hours_worked",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "rate_applied",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "wage_amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "created_by",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_attendance (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    worker_id INTEGER,\n    worker_name TEXT NOT NULL,\n    date TEXT NOT NULL,\n    status TEXT NOT NULL,\n    day_fraction REAL NOT NULL DEFAULT 1.0,\n    hours_worked REAL DEFAULT 0.0,\n    rate_applied REAL NOT NULL,\n    wage_amount REAL NOT NULL,\n    notes TEXT,\n    created_by INTEGER NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(worker_id) REFERENCES labour_workers(id) ON DELETE CASCADE,\n    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "created_by",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "worker_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_workers"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "date"
+          ],
+          "name": "idx_labour_attendance_date",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "labour_job_id",
+            "worker_name",
+            "date"
+          ],
+          "duplicate_groups": 0,
+          "name": "idx_labour_attendance_unique",
+          "origin": "c",
+          "partial": false,
+          "unique": true
+        }
+      ],
+      "name": "labour_attendance",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 48,
+      "unique_constraints": [
+        {
+          "columns": [
+            "labour_job_id",
+            "worker_name",
+            "date"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "idx_labour_attendance_unique",
+          "origin": "c"
+        }
+      ]
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 8,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "session_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "start_time",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "end_time",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0",
+          "name": "duration_seconds",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "reason",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_breaks (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    session_id INTEGER,\n    start_time TEXT NOT NULL,\n    end_time TEXT,\n    duration_seconds INTEGER DEFAULT 0,\n    reason TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(session_id) REFERENCES labour_work_sessions(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "session_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_work_sessions"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "labour_breaks",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 10,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 10,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "raised_by",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "reason",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "description",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "evidence_text",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'OPEN'",
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "resolution",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "resolved_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_disputes (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    raised_by INTEGER NOT NULL,\n    reason TEXT NOT NULL,\n    description TEXT,\n    evidence_text TEXT,\n    status TEXT NOT NULL DEFAULT 'OPEN',\n    resolution TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    resolved_at TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(raised_by) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "raised_by",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "labour_job_id",
+            "status"
+          ],
+          "name": "idx_labour_disputes_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "labour_disputes",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 10,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 31,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "join_token",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "farmer_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "worker_phone",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "work_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "crop",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "field_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "work_date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "expected_start_date",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "expected_end_date",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'per_day'",
+          "name": "payment_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "rate",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "1",
+          "name": "num_workers",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "'CREATED'",
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0",
+          "name": "farmer_agreed",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0",
+          "name": "worker_agreed",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0",
+          "name": "farmer_confirmed",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0",
+          "name": "worker_confirmed",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0",
+          "name": "total_working_seconds",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0.0",
+          "name": "total_days_worked",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_earned",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_paid",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_advance",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "pending_amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "expense_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "updated_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_jobs (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    job_id TEXT UNIQUE NOT NULL,\n    join_token TEXT UNIQUE NOT NULL,\n    farmer_id INTEGER NOT NULL,\n    worker_id INTEGER,\n    worker_name TEXT NOT NULL,\n    worker_phone TEXT,\n    work_type TEXT NOT NULL,\n    crop TEXT NOT NULL,\n    field_name TEXT NOT NULL,\n    work_date TEXT NOT NULL,\n    expected_start_date TEXT,\n    expected_end_date TEXT,\n    payment_type TEXT NOT NULL DEFAULT 'per_day',\n    rate REAL NOT NULL,\n    num_workers INTEGER NOT NULL DEFAULT 1,\n    status TEXT NOT NULL DEFAULT 'CREATED',\n    farmer_agreed INTEGER NOT NULL DEFAULT 0,\n    worker_agreed INTEGER NOT NULL DEFAULT 0,\n    farmer_confirmed INTEGER NOT NULL DEFAULT 0,\n    worker_confirmed INTEGER NOT NULL DEFAULT 0,\n    total_working_seconds INTEGER NOT NULL DEFAULT 0,\n    total_days_worked REAL NOT NULL DEFAULT 0.0,\n    total_earned REAL NOT NULL DEFAULT 0.0,\n    total_paid REAL NOT NULL DEFAULT 0.0,\n    total_advance REAL NOT NULL DEFAULT 0.0,\n    pending_amount REAL NOT NULL DEFAULT 0.0,\n    expense_id INTEGER,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(farmer_id) REFERENCES users(id) ON DELETE CASCADE,\n    FOREIGN KEY(worker_id) REFERENCES users(id) ON DELETE SET NULL,\n    FOREIGN KEY(expense_id) REFERENCES farm_expenses(id) ON DELETE SET NULL\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "expense_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "farm_expenses"
+        },
+        {
+          "columns": [
+            {
+              "from": "worker_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "farmer_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "work_date"
+          ],
+          "name": "idx_labour_jobs_date",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "farmer_id",
+            "status"
+          ],
+          "name": "idx_labour_jobs_farmer",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "job_id"
+          ],
+          "name": "idx_labour_jobs_job_id",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "join_token"
+          ],
+          "name": "idx_labour_jobs_join_token",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "worker_id",
+            "status"
+          ],
+          "name": "idx_labour_jobs_worker",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "job_id"
+          ],
+          "duplicate_groups": 0,
+          "name": "sqlite_autoindex_labour_jobs_1",
+          "origin": "u",
+          "partial": false,
+          "unique": true
+        },
+        {
+          "columns": [
+            "join_token"
+          ],
+          "duplicate_groups": 0,
+          "name": "sqlite_autoindex_labour_jobs_2",
+          "origin": "u",
+          "partial": false,
+          "unique": true
+        }
+      ],
+      "name": "labour_jobs",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 34,
+      "unique_constraints": [
+        {
+          "columns": [
+            "job_id"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "sqlite_autoindex_labour_jobs_1",
+          "origin": "u"
+        },
+        {
+          "columns": [
+            "join_token"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "sqlite_autoindex_labour_jobs_2",
+          "origin": "u"
+        }
+      ]
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 11,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "worker_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "farmer_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "payment_date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'Cash'",
+          "name": "payment_method",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "reference_no",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_payments (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    worker_id INTEGER,\n    worker_name TEXT NOT NULL,\n    farmer_id INTEGER NOT NULL,\n    amount REAL NOT NULL,\n    payment_date TEXT NOT NULL,\n    payment_method TEXT NOT NULL DEFAULT 'Cash',\n    reference_no TEXT,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(worker_id) REFERENCES labour_workers(id) ON DELETE SET NULL,\n    FOREIGN KEY(farmer_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "farmer_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "worker_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_workers"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "farmer_id"
+          ],
+          "name": "idx_labour_payments_farmer",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "labour_job_id"
+          ],
+          "name": "idx_labour_payments_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "labour_payments",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 22,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 7,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "event_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "performed_by",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "server_timestamp",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_work_events (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    event_type TEXT NOT NULL,\n    performed_by INTEGER NOT NULL,\n    server_timestamp TEXT NOT NULL,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(performed_by) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "performed_by",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "labour_job_id",
+            "id"
+          ],
+          "name": "idx_labour_events_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "event_type"
+          ],
+          "name": "idx_labour_events_type",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "labour_work_events",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 224,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 8,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "'HOURLY_WORK'",
+          "name": "session_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "start_time",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "end_time",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0",
+          "name": "duration_seconds",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "'RUNNING'",
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_work_sessions (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    session_type TEXT NOT NULL DEFAULT 'HOURLY_WORK',\n    start_time TEXT NOT NULL,\n    end_time TEXT,\n    duration_seconds INTEGER DEFAULT 0,\n    status TEXT NOT NULL DEFAULT 'RUNNING',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "labour_work_sessions",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 10,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 14,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "labour_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "phone",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'worker'",
+          "name": "role",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0.0",
+          "name": "total_days",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_hours",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_earned",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_paid",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "total_advance",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "pending_amount",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "'ACTIVE'",
+          "name": "status",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE labour_workers (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    labour_job_id INTEGER NOT NULL,\n    user_id INTEGER,\n    name TEXT NOT NULL,\n    phone TEXT,\n    role TEXT DEFAULT 'worker',\n    total_days REAL DEFAULT 0.0,\n    total_hours REAL DEFAULT 0.0,\n    total_earned REAL DEFAULT 0.0,\n    total_paid REAL DEFAULT 0.0,\n    total_advance REAL DEFAULT 0.0,\n    pending_amount REAL DEFAULT 0.0,\n    status TEXT DEFAULT 'ACTIVE',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(labour_job_id) REFERENCES labour_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "labour_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "labour_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "labour_job_id"
+          ],
+          "name": "idx_labour_workers_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "labour_workers",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 34,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 12,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "email",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "otp_hash",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "expires_at",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "0",
+          "name": "verification_attempts",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "5",
+          "name": "max_attempts",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0",
+          "name": "is_used",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "used_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "reset_token_hash",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "reset_token_expires_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE password_reset_otps (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    email TEXT NOT NULL,\n    otp_hash TEXT NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    expires_at TIMESTAMP NOT NULL,\n    verification_attempts INTEGER NOT NULL DEFAULT 0,\n    max_attempts INTEGER NOT NULL DEFAULT 5,\n    is_used INTEGER NOT NULL DEFAULT 0,\n    used_at TIMESTAMP,\n    reset_token_hash TEXT,\n    reset_token_expires_at TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "email",
+            "is_used"
+          ],
+          "name": "idx_password_reset_otps_email",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "is_used"
+          ],
+          "name": "idx_password_reset_otps_user",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "password_reset_otps",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 24,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 7,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "crop_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "field_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "location",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE plants (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    crop_name TEXT NOT NULL,\n    field_name TEXT NOT NULL,\n    location TEXT NOT NULL,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [],
+      "name": "plants",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 4,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 9,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "tractor_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "raised_by",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "reason",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "description",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'OPEN'",
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "resolution",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "resolved_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE tractor_disputes (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    tractor_job_id INTEGER NOT NULL,\n    raised_by INTEGER NOT NULL,\n    reason TEXT NOT NULL,\n    description TEXT,\n    status TEXT NOT NULL DEFAULT 'OPEN',\n    resolution TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    resolved_at TIMESTAMP,\n    FOREIGN KEY(tractor_job_id) REFERENCES tractor_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(raised_by) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "raised_by",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "tractor_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "tractor_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "tractor_job_id",
+            "status"
+          ],
+          "name": "idx_tractor_disputes_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "tractor_disputes",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 10,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 23,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "join_token",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "farmer_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "driver_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "driver_name",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "driver_phone",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "tractor_number",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "crop",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "field_name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "work_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "work_date",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0.0",
+          "name": "field_size",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "rate",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "'per_hour'",
+          "name": "rate_unit",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'CREATED'",
+          "name": "status",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "0",
+          "name": "total_working_seconds",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": "0.0",
+          "name": "calculated_amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": "0.0",
+          "name": "final_amount",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "REAL",
+          "sqlite_declared_type": "REAL"
+        },
+        {
+          "default": null,
+          "name": "expense_id",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "updated_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE tractor_jobs (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    job_id TEXT UNIQUE NOT NULL,\n    join_token TEXT UNIQUE NOT NULL,\n    farmer_id INTEGER NOT NULL,\n    driver_id INTEGER,\n    driver_name TEXT,\n    driver_phone TEXT,\n    tractor_number TEXT,\n    crop TEXT NOT NULL,\n    field_name TEXT NOT NULL,\n    work_type TEXT NOT NULL,\n    work_date TEXT NOT NULL,\n    field_size REAL DEFAULT 0.0,\n    rate REAL NOT NULL,\n    rate_unit TEXT NOT NULL DEFAULT 'per_hour',\n    status TEXT NOT NULL DEFAULT 'CREATED',\n    total_working_seconds INTEGER NOT NULL DEFAULT 0,\n    calculated_amount REAL NOT NULL DEFAULT 0.0,\n    final_amount REAL NOT NULL DEFAULT 0.0,\n    expense_id INTEGER,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(farmer_id) REFERENCES users(id) ON DELETE CASCADE,\n    FOREIGN KEY(driver_id) REFERENCES users(id) ON DELETE SET NULL,\n    FOREIGN KEY(expense_id) REFERENCES farm_expenses(id) ON DELETE SET NULL\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "expense_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "farm_expenses"
+        },
+        {
+          "columns": [
+            {
+              "from": "driver_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "SET NULL",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "farmer_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "work_date"
+          ],
+          "name": "idx_tractor_jobs_date",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "driver_id",
+            "status"
+          ],
+          "name": "idx_tractor_jobs_driver",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "farmer_id",
+            "status"
+          ],
+          "name": "idx_tractor_jobs_farmer",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "job_id"
+          ],
+          "name": "idx_tractor_jobs_job_id",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "join_token"
+          ],
+          "name": "idx_tractor_jobs_join_token",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "job_id"
+          ],
+          "duplicate_groups": 0,
+          "name": "sqlite_autoindex_tractor_jobs_1",
+          "origin": "u",
+          "partial": false,
+          "unique": true
+        },
+        {
+          "columns": [
+            "join_token"
+          ],
+          "duplicate_groups": 0,
+          "name": "sqlite_autoindex_tractor_jobs_2",
+          "origin": "u",
+          "partial": false,
+          "unique": true
+        }
+      ],
+      "name": "tractor_jobs",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 28,
+      "unique_constraints": [
+        {
+          "columns": [
+            "job_id"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "sqlite_autoindex_tractor_jobs_1",
+          "origin": "u"
+        },
+        {
+          "columns": [
+            "join_token"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "sqlite_autoindex_tractor_jobs_2",
+          "origin": "u"
+        }
+      ]
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 7,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "tractor_job_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "event_type",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "performed_by",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "server_timestamp",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "notes",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE tractor_work_events (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    tractor_job_id INTEGER NOT NULL,\n    event_type TEXT NOT NULL,\n    performed_by INTEGER NOT NULL,\n    server_timestamp TEXT NOT NULL,\n    notes TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY(tractor_job_id) REFERENCES tractor_jobs(id) ON DELETE CASCADE,\n    FOREIGN KEY(performed_by) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "performed_by",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        },
+        {
+          "columns": [
+            {
+              "from": "tractor_job_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "tractor_jobs"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "tractor_job_id",
+            "id"
+          ],
+          "name": "idx_tractor_events_job",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "event_type"
+          ],
+          "name": "idx_tractor_events_type",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        }
+      ],
+      "name": "tractor_work_events",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 84,
+      "unique_constraints": []
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 10,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "user_id",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "session_token_hash",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "ip_address",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "user_agent",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "expires_at",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "last_activity_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": "1",
+          "name": "is_active",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "revoked_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE user_sessions (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    user_id INTEGER NOT NULL,\n    session_token_hash TEXT UNIQUE NOT NULL,\n    ip_address TEXT,\n    user_agent TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    expires_at TIMESTAMP NOT NULL,\n    last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    revoked_at TIMESTAMP,\n    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [
+        {
+          "columns": [
+            {
+              "from": "user_id",
+              "sequence": 0,
+              "to": "id"
+            }
+          ],
+          "match": "NONE",
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "orphan_count": 0,
+          "table": "users"
+        }
+      ],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "session_token_hash",
+            "is_active"
+          ],
+          "name": "idx_user_sessions_lookup",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "user_id",
+            "is_active"
+          ],
+          "name": "idx_user_sessions_user",
+          "origin": "c",
+          "partial": false,
+          "unique": false
+        },
+        {
+          "columns": [
+            "session_token_hash"
+          ],
+          "duplicate_groups": 0,
+          "name": "sqlite_autoindex_user_sessions_1",
+          "origin": "u",
+          "partial": false,
+          "unique": true
+        }
+      ],
+      "name": "user_sessions",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 416,
+      "unique_constraints": [
+        {
+          "columns": [
+            "session_token_hash"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "sqlite_autoindex_user_sessions_1",
+          "origin": "u"
+        }
+      ]
+    },
+    {
+      "autoincrement_behavior": "explicit_sqlite_autoincrement",
+      "column_count": 8,
+      "columns": [
+        {
+          "default": null,
+          "name": "id",
+          "not_null": false,
+          "primary_key_position": 1,
+          "sqlite_affinity": "INTEGER",
+          "sqlite_declared_type": "INTEGER"
+        },
+        {
+          "default": null,
+          "name": "name",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "email",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": null,
+          "name": "password_hash",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'Telangana'",
+          "name": "location",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "'en'",
+          "name": "language",
+          "not_null": true,
+          "primary_key_position": 0,
+          "sqlite_affinity": "TEXT",
+          "sqlite_declared_type": "TEXT"
+        },
+        {
+          "default": "CURRENT_TIMESTAMP",
+          "name": "created_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        },
+        {
+          "default": null,
+          "name": "last_login_at",
+          "not_null": false,
+          "primary_key_position": 0,
+          "sqlite_affinity": "NUMERIC",
+          "sqlite_declared_type": "TIMESTAMP"
+        }
+      ],
+      "create_sql": "CREATE TABLE users (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL,\n    email TEXT UNIQUE NOT NULL,\n    password_hash TEXT NOT NULL,\n    location TEXT NOT NULL DEFAULT 'Telangana',\n    language TEXT NOT NULL DEFAULT 'en',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n, last_login_at TIMESTAMP)",
+      "duplicate_primary_key_groups": 0,
+      "foreign_keys": [],
+      "id_sequence_status": "sequence_ahead_or_equal_to_max",
+      "important_null_counts": {},
+      "indexes": [
+        {
+          "columns": [
+            "email"
+          ],
+          "duplicate_groups": 0,
+          "name": "sqlite_autoindex_users_1",
+          "origin": "u",
+          "partial": false,
+          "unique": true
+        }
+      ],
+      "name": "users",
+      "primary_key": [
+        "id"
+      ],
+      "row_count": 120,
+      "unique_constraints": [
+        {
+          "columns": [
+            "email"
+          ],
+          "duplicate_groups": 0,
+          "index_name": "sqlite_autoindex_users_1",
+          "origin": "u"
+        }
+      ]
+    }
+  ],
+  "total_rows": 1347,
+  "triggers": [],
+  "views": []
+}

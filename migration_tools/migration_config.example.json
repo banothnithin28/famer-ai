@@ -1,0 +1,7 @@
+{
+  "sqlite_source": "../database/farmer.db",
+  "export_root": "exports",
+  "destination_environment_variable": "MIGRATION_TEST_DATABASE_URL",
+  "batch_size": 500,
+  "required_sslmode": "verify-full"
+}
